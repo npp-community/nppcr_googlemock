@@ -11,10 +11,10 @@
 	/>
 	<UserMacro
 		Name="GTestDir"
-		Value="../gtest"
+		Value="../../gtest"
 	/>
 	<UserMacro
 		Name="BoostDir"
-		Value="../boost"
+		Value="C:\boost\boost_1_39_0\boost"
 	/>
 </VisualStudioPropertySheet>
