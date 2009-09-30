@@ -1,10 +1,10 @@
-<?xml version="1.0" encoding="Windows-1252"?>
+﻿<?xml version="1.0" encoding="UTF-8"?>
 <VisualStudioProject
 	ProjectType="Visual C++"
 	Version="9.00"
-	Name="gmock_link_test"
-	ProjectGUID="{ED597847-A714-4327-B569-70029D2311F0}"
-	RootNamespace="gmock_link_test"
+	Name="gmock_output_test_"
+	ProjectGUID="{EDCE4C87-C2C0-4D22-98AC-7B6466F89A15}"
+	RootNamespace="gmock_output_test_"
 	Keyword="Win32Proj"
 	TargetFrameworkVersion="131072"
 	>
@@ -42,7 +42,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="../include;.."
+				AdditionalIncludeDirectories="../include"
 				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
@@ -89,7 +89,7 @@
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
-				CommandLine="$(TargetPath)"
+				CommandLine=""
 			/>
 		</Configuration>
 		<Configuration
@@ -118,7 +118,7 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				AdditionalIncludeDirectories="../include;.."
+				AdditionalIncludeDirectories="../include"
 				PreprocessorDefinitions="WIN32;NDEBUG;_CONSOLE"
 				RuntimeLibrary="0"
 				UsePrecompiledHeader="0"
@@ -165,14 +165,14 @@
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
-				CommandLine="$(TargetPath)"
+				CommandLine=""
 			/>
 		</Configuration>
 	</Configurations>
 	<References>
 		<ProjectReference
 			ReferencedProjectIdentifier="{E4EF614B-30DF-4954-8C53-580A0BF6B589}"
-			RelativePathToProject=".\gmock_main.vcproj"
+			RelativePathToProject=".\gmock_main.vc.9.0.vcproj"
 		/>
 	</References>
 	<Files>
@@ -182,11 +182,7 @@
 			UniqueIdentifier="{4FC737F1-C7A5-4376-A066-2A32D752A2FF}"
 			>
 			<File
-				RelativePath="..\test\gmock_link2_test.cc"
-				>
-			</File>
-			<File
-				RelativePath="..\test\gmock_link_test.cc"
+				RelativePath="..\test\gmock_output_test_.cc"
 				>
 			</File>
 		</Filter>
