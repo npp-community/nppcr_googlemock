@@ -11,7 +11,7 @@
 	/>
 	<UserMacro
 		Name="GTestDir"
-		Value="../../gtest"
+		Value="../../google_test"
 	/>
 	<UserMacro
 		Name="BoostDir"
