@@ -1,15 +1,15 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 10.00
 # Visual C++ Express 2008
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "gmock", "gmock.vc.9.0.vcproj", "{34681F0D-CE45-415D-B5F2-5C662DFE3BD5}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "gmock", "gmock.9.vcproj", "{34681F0D-CE45-415D-B5F2-5C662DFE3BD5}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "gmock_test", "gmock_test.vc.9.0.vcproj", "{F10D22F8-AC7B-4213-8720-608E7D878CD2}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "gmock_test", "gmock_test.9.vcproj", "{F10D22F8-AC7B-4213-8720-608E7D878CD2}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "gmock_link_test", "gmock_link_test.vc.9.0.vcproj", "{ED597847-A714-4327-B569-70029D2311F0}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "gmock_link_test", "gmock_link_test.9.vcproj", "{ED597847-A714-4327-B569-70029D2311F0}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "gmock_output_test_", "gmock_output_test_.vc.9.0.vcproj", "{EDCE4C87-C2C0-4D22-98AC-7B6466F89A15}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "gmock_output_test_", "gmock_output_test_.9.vcproj", "{EDCE4C87-C2C0-4D22-98AC-7B6466F89A15}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "gmock_main", "gmock_main.vc.9.0.vcproj", "{E4EF614B-30DF-4954-8C53-580A0BF6B589}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "gmock_main", "gmock_main.9.vcproj", "{E4EF614B-30DF-4954-8C53-580A0BF6B589}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

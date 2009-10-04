@@ -1,7 +1,7 @@
 ﻿<?xml version="1.0" encoding="UTF-8"?>
 <VisualStudioProject
 	ProjectType="Visual C++"
-	Version="8.00"
+	Version="9.00"
 	Name="gmock"
 	ProjectGUID="{34681F0D-CE45-415D-B5F2-5C662DFE3BD5}"
 	RootNamespace="gmock"
@@ -21,7 +21,7 @@
 			OutputDirectory="$(SolutionDir)$(ConfigurationName)"
 			IntermediateDirectory="$(OutDir)\$(ProjectName)"
 			ConfigurationType="4"
-			InheritedPropertySheets=".\gmock_config.vsprops"
+			InheritedPropertySheets=".\gmock_config.vsprops;.\submodule_lib_paths.vsprops;.\environment_lib_paths.vsprops"
 			CharacterSet="1"
 			>
 			<Tool
@@ -84,7 +84,7 @@
 			OutputDirectory="$(SolutionDir)$(ConfigurationName)"
 			IntermediateDirectory="$(OutDir)\$(ProjectName)"
 			ConfigurationType="4"
-			InheritedPropertySheets=".\gmock_config.vsprops"
+			InheritedPropertySheets=".\gmock_config.vsprops;.\submodule_lib_paths.vsprops;.\environment_lib_paths.vsprops"
 			CharacterSet="1"
 			WholeProgramOptimization="1"
 			>
@@ -172,26 +172,6 @@
 			<File
 				RelativePath="..\src\gmock.cc"
 				>
-			</File>
-			<File
-				RelativePath="$(GTestDir)\src\gtest-all.cc"
-				>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories="$(GTestDir)"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories="$(GTestDir)"
-					/>
-				</FileConfiguration>
 			</File>
 		</Filter>
 		<Filter
