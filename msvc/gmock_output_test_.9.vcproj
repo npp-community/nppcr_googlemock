@@ -2,9 +2,9 @@
 <VisualStudioProject
 	ProjectType="Visual C++"
 	Version="9.00"
-	Name="gmock_link_test"
-	ProjectGUID="{ED597847-A714-4327-B569-70029D2311F0}"
-	RootNamespace="gmock_link_test"
+	Name="gmock_output_test_"
+	ProjectGUID="{EDCE4C87-C2C0-4D22-98AC-7B6466F89A15}"
+	RootNamespace="gmock_output_test_"
 	Keyword="Win32Proj"
 	TargetFrameworkVersion="131072"
 	>
@@ -21,7 +21,7 @@
 			OutputDirectory="$(SolutionDir)$(ConfigurationName)"
 			IntermediateDirectory="$(OutDir)\$(ProjectName)"
 			ConfigurationType="1"
-			InheritedPropertySheets=".\gmock_config.vsprops"
+			InheritedPropertySheets=".\gmock_config.vsprops;.\submodule_lib_paths.vsprops;.\environment_lib_paths.vsprops"
 			CharacterSet="1"
 			>
 			<Tool
@@ -42,7 +42,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="../include;.."
+				AdditionalIncludeDirectories="../include"
 				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
@@ -90,7 +90,7 @@
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
-				CommandLine="&quot;$(TargetPath)&quot;"
+				CommandLine=""
 			/>
 		</Configuration>
 		<Configuration
@@ -98,7 +98,7 @@
 			OutputDirectory="$(SolutionDir)$(ConfigurationName)"
 			IntermediateDirectory="$(OutDir)\$(ProjectName)"
 			ConfigurationType="1"
-			InheritedPropertySheets=".\gmock_config.vsprops"
+			InheritedPropertySheets=".\gmock_config.vsprops;.\submodule_lib_paths.vsprops;.\environment_lib_paths.vsprops"
 			CharacterSet="1"
 			WholeProgramOptimization="1"
 			>
@@ -119,7 +119,7 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				AdditionalIncludeDirectories="../include;.."
+				AdditionalIncludeDirectories="../include"
 				PreprocessorDefinitions="WIN32;NDEBUG;_CONSOLE"
 				RuntimeLibrary="0"
 				UsePrecompiledHeader="0"
@@ -167,7 +167,7 @@
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
-				CommandLine="&quot;$(TargetPath)&quot;"
+				CommandLine=""
 			/>
 		</Configuration>
 	</Configurations>
@@ -184,11 +184,7 @@
 			UniqueIdentifier="{4FC737F1-C7A5-4376-A066-2A32D752A2FF}"
 			>
 			<File
-				RelativePath="..\test\gmock_link2_test.cc"
-				>
-			</File>
-			<File
-				RelativePath="..\test\gmock_link_test.cc"
+				RelativePath="..\test\gmock_output_test_.cc"
 				>
 			</File>
 		</Filter>

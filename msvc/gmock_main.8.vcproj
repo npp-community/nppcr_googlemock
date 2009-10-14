@@ -1,12 +1,11 @@
 ﻿<?xml version="1.0" encoding="UTF-8"?>
 <VisualStudioProject
 	ProjectType="Visual C++"
-	Version="9.00"
-	Name="gmock_test"
-	ProjectGUID="{F10D22F8-AC7B-4213-8720-608E7D878CD2}"
-	RootNamespace="gmock_test"
+	Version="8.00"
+	Name="gmock_main"
+	ProjectGUID="{E4EF614B-30DF-4954-8C53-580A0BF6B589}"
+	RootNamespace="gmock_main"
 	Keyword="Win32Proj"
-	TargetFrameworkVersion="131072"
 	>
 	<Platforms>
 		<Platform
@@ -20,8 +19,8 @@
 			Name="Debug|Win32"
 			OutputDirectory="$(SolutionDir)$(ConfigurationName)"
 			IntermediateDirectory="$(OutDir)\$(ProjectName)"
-			ConfigurationType="1"
-			InheritedPropertySheets=".\gmock_config.vsprops"
+			ConfigurationType="4"
+			InheritedPropertySheets=".\gmock_config.vsprops;.\submodule_lib_paths.vsprops;.\environment_lib_paths.vsprops"
 			CharacterSet="1"
 			>
 			<Tool
@@ -43,7 +42,7 @@
 				Name="VCCLCompilerTool"
 				Optimization="0"
 				AdditionalIncludeDirectories="../include"
-				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE"
+				PreprocessorDefinitions="WIN32;_DEBUG;_LIB"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="1"
@@ -61,20 +60,10 @@
 				Name="VCPreLinkEventTool"
 			/>
 			<Tool
-				Name="VCLinkerTool"
-				AdditionalDependencies="gtestd.lib"
-				LinkIncremental="2"
-				GenerateDebugInformation="true"
-				SubSystem="1"
-				RandomizedBaseAddress="1"
-				DataExecutionPrevention="0"
-				TargetMachine="1"
+				Name="VCLibrarianTool"
 			/>
 			<Tool
 				Name="VCALinkTool"
-			/>
-			<Tool
-				Name="VCManifestTool"
 			/>
 			<Tool
 				Name="VCXDCMakeTool"
@@ -86,19 +75,15 @@
 				Name="VCFxCopTool"
 			/>
 			<Tool
-				Name="VCAppVerifierTool"
-			/>
-			<Tool
 				Name="VCPostBuildEventTool"
-				CommandLine="&quot;$(TargetPath)&quot;"
 			/>
 		</Configuration>
 		<Configuration
 			Name="Release|Win32"
 			OutputDirectory="$(SolutionDir)$(ConfigurationName)"
 			IntermediateDirectory="$(OutDir)\$(ProjectName)"
-			ConfigurationType="1"
-			InheritedPropertySheets=".\gmock_config.vsprops"
+			ConfigurationType="4"
+			InheritedPropertySheets=".\gmock_config.vsprops;.\submodule_lib_paths.vsprops;.\environment_lib_paths.vsprops"
 			CharacterSet="1"
 			WholeProgramOptimization="1"
 			>
@@ -120,7 +105,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				AdditionalIncludeDirectories="../include"
-				PreprocessorDefinitions="WIN32;NDEBUG;_CONSOLE"
+				PreprocessorDefinitions="WIN32;NDEBUG;_LIB"
 				RuntimeLibrary="0"
 				UsePrecompiledHeader="0"
 				WarningLevel="3"
@@ -136,22 +121,10 @@
 				Name="VCPreLinkEventTool"
 			/>
 			<Tool
-				Name="VCLinkerTool"
-				AdditionalDependencies="gtest.lib"
-				LinkIncremental="1"
-				GenerateDebugInformation="true"
-				SubSystem="1"
-				OptimizeReferences="2"
-				EnableCOMDATFolding="2"
-				RandomizedBaseAddress="1"
-				DataExecutionPrevention="0"
-				TargetMachine="1"
+				Name="VCLibrarianTool"
 			/>
 			<Tool
 				Name="VCALinkTool"
-			/>
-			<Tool
-				Name="VCManifestTool"
 			/>
 			<Tool
 				Name="VCXDCMakeTool"
@@ -163,18 +136,14 @@
 				Name="VCFxCopTool"
 			/>
 			<Tool
-				Name="VCAppVerifierTool"
-			/>
-			<Tool
 				Name="VCPostBuildEventTool"
-				CommandLine="&quot;$(TargetPath)&quot;"
 			/>
 		</Configuration>
 	</Configurations>
 	<References>
 		<ProjectReference
-			ReferencedProjectIdentifier="{E4EF614B-30DF-4954-8C53-580A0BF6B589}"
-			RelativePathToProject=".\gmock_main.vc.9.0.vcproj"
+			ReferencedProjectIdentifier="{34681F0D-CE45-415D-B5F2-5C662DFE3BD5}"
+			RelativePathToProject=".\gmock.8.vcproj"
 		/>
 	</References>
 	<Files>
@@ -184,56 +153,24 @@
 			UniqueIdentifier="{4FC737F1-C7A5-4376-A066-2A32D752A2FF}"
 			>
 			<File
-				RelativePath="..\test\gmock-actions_test.cc"
+				RelativePath="..\src\gmock_main.cc"
 				>
-			</File>
-			<File
-				RelativePath="..\test\gmock-cardinalities_test.cc"
-				>
-			</File>
-			<File
-				RelativePath="..\test\gmock-generated-actions_test.cc"
-				>
-			</File>
-			<File
-				RelativePath="..\test\gmock-generated-function-mockers_test.cc"
-				>
-			</File>
-			<File
-				RelativePath="..\test\gmock-generated-internal-utils_test.cc"
-				>
-			</File>
-			<File
-				RelativePath="..\test\gmock-generated-matchers_test.cc"
-				>
-			</File>
-			<File
-				RelativePath="..\test\gmock-internal-utils_test.cc"
-				>
-			</File>
-			<File
-				RelativePath="..\test\gmock-matchers_test.cc"
-				>
-			</File>
-			<File
-				RelativePath="..\test\gmock-nice-strict_test.cc"
-				>
-			</File>
-			<File
-				RelativePath="..\test\gmock-port_test.cc"
-				>
-			</File>
-			<File
-				RelativePath="..\test\gmock-printers_test.cc"
-				>
-			</File>
-			<File
-				RelativePath="..\test\gmock-spec-builders_test.cc"
-				>
-			</File>
-			<File
-				RelativePath="..\test\gmock_test.cc"
-				>
+				<FileConfiguration
+					Name="Debug|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						AdditionalIncludeDirectories="../include"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						AdditionalIncludeDirectories=""
+					/>
+				</FileConfiguration>
 			</File>
 		</Filter>
 		<Filter
