@@ -173,26 +173,6 @@
 				RelativePath="..\src\gmock.cc"
 				>
 			</File>
-			<File
-				RelativePath="$(GTestDir)\src\gtest-all.cc"
-				>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories="$(GTestDir)"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories="$(GTestDir)"
-					/>
-				</FileConfiguration>
-			</File>
 		</Filter>
 		<Filter
 			Name="Public Header Files"
