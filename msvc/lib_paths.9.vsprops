@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<VisualStudioPropertySheet
+	ProjectType="Visual C++"
+	Version="8.00"
+	Name="lib_paths"
+	OutputDirectory="$(SolutionDir)vc9/$(ConfigurationName)"
+	IntermediateDirectory="$(OutDir)/$(ProjectName)"
+	InheritedPropertySheets=".\submodule_lib_paths.vsprops;.\environment_lib_paths.vsprops"
+	>
+	<Tool
+		Name="VCLibrarianTool"
+		AdditionalLibraryDirectories="$(ENV_LIB_PATHS);$(SM_LIB_PATHS)"
+	/>
+	<Tool
+		Name="VCLinkerTool"
+		AdditionalLibraryDirectories="$(ENV_LIB_PATHS);$(SM_LIB_PATHS)"
+	/>
+	<UserMacro
+		Name="ENV_LIB_PATHS"
+		Value="&quot;$(envGTEST_DIR)\msvc\vc9\$(ConfigurationName)&quot;"
+		PerformEnvironmentSet="true"
+	/>
+	<UserMacro
+		Name="SM_LIB_PATHS"
+		Value="&quot;$(smGTEST_DIR)\msvc\vc9\$(ConfigurationName)\&quot;"
+		PerformEnvironmentSet="true"
+	/>
+</VisualStudioPropertySheet>

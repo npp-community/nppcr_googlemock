@@ -17,10 +17,8 @@
 	<Configurations>
 		<Configuration
 			Name="Debug|Win32"
-			OutputDirectory="$(SolutionDir)$(ConfigurationName)"
-			IntermediateDirectory="$(OutDir)\$(ProjectName)"
 			ConfigurationType="1"
-			InheritedPropertySheets=".\gmock_config.vsprops;.\submodule_lib_paths.vsprops;.\environment_lib_paths.vsprops"
+			InheritedPropertySheets=".\gmock_config.vsprops;.\lib_paths.8.vsprops"
 			CharacterSet="1"
 			>
 			<Tool
@@ -95,10 +93,8 @@
 		</Configuration>
 		<Configuration
 			Name="Release|Win32"
-			OutputDirectory="$(SolutionDir)$(ConfigurationName)"
-			IntermediateDirectory="$(OutDir)\$(ProjectName)"
 			ConfigurationType="1"
-			InheritedPropertySheets=".\gmock_config.vsprops;.\submodule_lib_paths.vsprops;.\environment_lib_paths.vsprops"
+			InheritedPropertySheets=".\gmock_config.vsprops;.\lib_paths.8.vsprops"
 			CharacterSet="1"
 			WholeProgramOptimization="1"
 			>
