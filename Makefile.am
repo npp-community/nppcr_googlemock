@@ -34,6 +34,7 @@ pkginclude_HEADERS = include/gmock/gmock.h \
                      include/gmock/gmock-generated-matchers.h \
                      include/gmock/gmock-generated-nice-strict.h \
                      include/gmock/gmock-matchers.h \
+                     include/gmock/gmock-more-actions.h \
                      include/gmock/gmock-printers.h \
                      include/gmock/gmock-spec-builders.h
 
@@ -110,6 +111,11 @@ check_PROGRAMS += test/gmock-matchers_test
 test_gmock_matchers_test_SOURCES = test/gmock-matchers_test.cc
 test_gmock_matchers_test_LDADD = $(GTEST_LIBS) lib/libgmock_main.la
 
+TESTS += test/gmock-more-actions_test
+check_PROGRAMS += test/gmock-more-actions_test
+test_gmock_more_actions_test_SOURCES = test/gmock-more-actions_test.cc
+test_gmock_more_actions_test_LDADD = $(GTEST_LIBS) lib/libgmock_main.la
+
 TESTS += test/gmock-nice-strict_test
 check_PROGRAMS += test/gmock-nice-strict_test
 test_gmock_nice_strict_test_SOURCES = test/gmock-nice-strict_test.cc
@@ -128,12 +134,34 @@ test_gmock_printers_test_LDADD = $(GTEST_LIBS) lib/libgmock_main.la
 TESTS += test/gmock-spec-builders_test
 check_PROGRAMS += test/gmock-spec-builders_test
 test_gmock_spec_builders_test_SOURCES = test/gmock-spec-builders_test.cc
-test_gmock_spec_builders_test_LDADD = $(GTEST_LIBS) lib/libgmock_main.la
+test_gmock_spec_builders_test_LDADD = $(GTEST_LIBS) lib/libgmock.la
 
 TESTS += test/gmock_test
 check_PROGRAMS += test/gmock_test
 test_gmock_test_SOURCES = test/gmock_test.cc
 test_gmock_test_LDADD = $(GTEST_LIBS) lib/libgmock_main.la
+
+# A sanity test for verifying that Google Mock works when RTTI is
+# disabled.  We pick gmock-spec-builders_test.cc as it exercises all
+# components of Google Mock.
+TESTS += test/gmock_no_rtti_test
+check_PROGRAMS += test/gmock_no_rtti_test
+test_gmock_no_rtti_test_SOURCES = test/gmock-spec-builders_test.cc \
+                                  src/gmock-all.cc
+test_gmock_no_rtti_test_CXXFLAGS = $(AM_CXXFLAGS) -fno-rtti -DGTEST_HAS_RTTI=0
+test_gmock_no_rtti_test_LDADD = $(GTEST_LIBS)
+
+# A sanity test for verifying that Google Mock works with Google
+# Test's TR1 tuple implementation.  We pick
+# gmock-spec-builders_test.cc as it exercises all components of Google
+# Mock.
+TESTS += test/gmock_use_own_tuple_test
+check_PROGRAMS += test/gmock_use_own_tuple_test
+test_gmock_use_own_tuple_test_SOURCES = test/gmock-spec-builders_test.cc \
+                                        src/gmock-all.cc
+test_gmock_use_own_tuple_test_CXXFLAGS = \
+    $(AM_CXXFLAGS) -DGTEST_USE_OWN_TR1_TUPLE=1
+test_gmock_use_own_tuple_test_LDADD = $(GTEST_LIBS)
 
 # The following tests depend on the presence of a Python installation and are
 # keyed off of it. We only add them to the TESTS variable when a Python
@@ -147,6 +175,11 @@ dist_check_SCRIPTS =
 # Python modules used by multiple Python tests below.
 dist_check_SCRIPTS += test/gmock_test_utils.py
 
+check_PROGRAMS += test/gmock_leak_test_
+test_gmock_leak_test__SOURCES = test/gmock_leak_test_.cc
+test_gmock_leak_test__LDADD = $(GTEST_LIBS) lib/libgmock_main.la
+dist_check_SCRIPTS += test/gmock_leak_test.py
+
 check_PROGRAMS += test/gmock_output_test_
 test_gmock_output_test__SOURCES = test/gmock_output_test_.cc
 test_gmock_output_test__LDADD = $(GTEST_LIBS) lib/libgmock_main.la
@@ -155,15 +188,17 @@ EXTRA_DIST += test/gmock_output_test_golden.txt
 
 # Enable all the python driven tests when we can run them.
 if HAVE_PYTHON
-TESTS += test/gmock_output_test.py
+TESTS += \
+    test/gmock_leak_test.py \
+    test/gmock_output_test.py
 endif
 
 # Nonstandard package files for distribution.
 EXTRA_DIST += \
-  CHANGES \
-  CONTRIBUTORS \
-  make/Makefile \
-  src/gmock-all.cc
+    CHANGES \
+    CONTRIBUTORS \
+    make/Makefile \
+    src/gmock-all.cc
 
 # Pump scripts for generating Google Mock headers.
 # TODO(chandlerc@google.com): automate the generation of *.h from *.h.pump.
@@ -172,6 +207,11 @@ EXTRA_DIST += include/gmock/gmock-generated-actions.h.pump \
               include/gmock/gmock-generated-matchers.h.pump \
               include/gmock/gmock-generated-nice-strict.h.pump \
               include/gmock/internal/gmock-generated-internal-utils.h.pump
+
+# Script for fusing Google Mock and Google Test source files.
+EXTRA_DIST += \
+    scripts/fuse_gmock_files.py \
+    scripts/test/Makefile
 
 # The Google Mock Generator tool from the cppclean project.
 EXTRA_DIST += \
@@ -194,4 +234,5 @@ EXTRA_DIST += \
     msvc/gmock_link_test.vcproj \
     msvc/gmock_main.vcproj \
     msvc/gmock_output_test_.vcproj \
+    msvc/gmock-spec-builders_test.vcproj \
     msvc/gmock_test.vcproj

@@ -40,6 +40,7 @@
 #include <gtest/gtest.h>
 
 using testing::_;
+using testing::AnyNumber;
 using testing::Ge;
 using testing::InSequence;
 using testing::Ref;
@@ -176,19 +177,19 @@ TEST_F(GMockOutputTest, MismatchArguments) {
   foo_.Bar(s, 0, 0);
 }
 
-TEST_F(GMockOutputTest, MismatchWithArguments) {
+TEST_F(GMockOutputTest, MismatchWith) {
   EXPECT_CALL(foo_, Bar2(Ge(2), Ge(1)))
-      .WithArguments(Ge());
+      .With(Ge());
 
-  foo_.Bar2(2, 3);  // Mismatch WithArguments()
+  foo_.Bar2(2, 3);  // Mismatch With()
   foo_.Bar2(2, 1);
 }
 
-TEST_F(GMockOutputTest, MismatchArgumentsAndWithArguments) {
+TEST_F(GMockOutputTest, MismatchArgumentsAndWith) {
   EXPECT_CALL(foo_, Bar2(Ge(2), Ge(1)))
-      .WithArguments(Ge());
+      .With(Ge());
 
-  foo_.Bar2(1, 3);  // Mismatch arguments and mismatch WithArguments()
+  foo_.Bar2(1, 3);  // Mismatch arguments and mismatch With()
   foo_.Bar2(2, 1);
 }
 
@@ -238,4 +239,43 @@ TEST_F(GMockOutputTest, ExplicitActionsRunOutWithDefaultAction) {
       .WillOnce(Return(false));
   foo_.Bar2(2, 2);
   foo_.Bar2(1, 1);  // Explicit actions in EXPECT_CALL run out.
+}
+
+TEST_F(GMockOutputTest, CatchesLeakedMocks) {
+  MockFoo* foo1 = new MockFoo;
+  MockFoo* foo2 = new MockFoo;
+
+  // Invokes ON_CALL on foo1.
+  ON_CALL(*foo1, Bar(_, _, _)).WillByDefault(Return('a'));
+
+  // Invokes EXPECT_CALL on foo2.
+  EXPECT_CALL(*foo2, Bar2(_, _));
+  EXPECT_CALL(*foo2, Bar2(1, _));
+  EXPECT_CALL(*foo2, Bar3(_, _)).Times(AnyNumber());
+  foo2->Bar2(2, 1);
+  foo2->Bar2(1, 1);
+
+  // Both foo1 and foo2 are deliberately leaked.
+}
+
+void TestCatchesLeakedMocksInAdHocTests() {
+  MockFoo* foo = new MockFoo;
+
+  // Invokes EXPECT_CALL on foo.
+  EXPECT_CALL(*foo, Bar2(_, _));
+  foo->Bar2(2, 1);
+
+  // foo is deliberately leaked.
+}
+
+int main(int argc, char **argv) {
+  testing::InitGoogleMock(&argc, argv);
+
+  // Ensures that the tests pass no matter what value of
+  // --gmock_catch_leaked_mocks and --gmock_verbose the user specifies.
+  testing::GMOCK_FLAG(catch_leaked_mocks) = true;
+  testing::GMOCK_FLAG(verbose) = "warning";
+
+  TestCatchesLeakedMocksInAdHocTests();
+  return RUN_ALL_TESTS();
 }

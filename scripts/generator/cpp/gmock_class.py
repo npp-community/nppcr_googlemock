@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# Copyright 2008 Google Inc.
+# Copyright 2008 Google Inc.  All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,13 +14,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Generate a Google Mock class from a production class.
+"""Generate Google Mock classes from base classes.
 
-This program will read in a C++ source file and output the Google Mock class
-for the specified class.
+This program will read in a C++ source file and output the Google Mock
+classes for the specified classes.  If no class is specified, all
+classes in the source file are emitted.
 
 Usage:
-  gmock_class.py header-file.h ClassName
+  gmock_class.py header-file.h [ClassName]...
 
 Output is sent to stdout.
 """
@@ -30,12 +31,14 @@ __author__ = 'nnorwitz@google.com (Neal Norwitz)'
 
 import os
 import re
+import sets
 import sys
 
 from cpp import ast
 from cpp import utils
 
-# How many spaces to indent.  Can me set with INDENT environment variable.
+_VERSION = (1, 0, 1)  # The version of this script.
+# How many spaces to indent.  Can set me with the INDENT environment variable.
 _INDENT = 2
 
 
@@ -54,7 +57,11 @@ def _GenerateMethods(output_lines, source, class_node):
         const = 'CONST_'
       return_type = 'void'
       if node.return_type:
-        return_type = node.return_type.name
+        # Add modifiers like 'const'.
+        modifiers = ''
+        if node.return_type.modifiers:
+          modifiers = ' '.join(node.return_type.modifiers) + ' '
+        return_type = modifiers + node.return_type.name
         if node.return_type.pointer:
           return_type += '*'
         if node.return_type.reference:
@@ -66,7 +73,13 @@ def _GenerateMethods(output_lines, source, class_node):
         # of the first parameter to the end of the last parameter.
         start = node.parameters[0].start
         end = node.parameters[-1].end
-        args = re.sub('  +', ' ', source[start:end].replace('\n', ''))
+        # Remove // comments.
+        args_strings = re.sub(r'//.*', '', source[start:end])
+        # Condense multiple spaces and eliminate newlines putting the
+        # parameters together on a single line.  Ensure there is a
+        # space in an argument which is split by a newline without
+        # intervening whitespace, e.g.: int\nBar
+        args = re.sub('  +', ' ', args_strings.replace('\n', ' '))
 
       # Create the prototype.
       indent = ' ' * _INDENT
@@ -75,10 +88,15 @@ def _GenerateMethods(output_lines, source, class_node):
       output_lines.append(line)
 
 
-def _GenerateMock(filename, source, ast_list, class_name):
+def _GenerateMocks(filename, source, ast_list, desired_class_names):
+  processed_class_names = sets.Set()
   lines = []
   for node in ast_list:
-    if isinstance(node, ast.Class) and node.body and node.name == class_name:
+    if (isinstance(node, ast.Class) and node.body and
+        # desired_class_names being None means that all classes are selected.
+        (not desired_class_names or node.name in desired_class_names)):
+      class_name = node.name
+      processed_class_names.add(class_name)
       class_node = node
       # Add namespace before the class.
       if class_node.namespace:
@@ -108,15 +126,23 @@ def _GenerateMock(filename, source, ast_list, class_name):
           lines.append('}  // namespace %s' % class_node.namespace[i])
         lines.append('')  # Add an extra newline.
 
-  if lines:
-    sys.stdout.write('\n'.join(lines))
-  else:
-    sys.stderr.write('Class %s not found\n' % class_name)
+  if desired_class_names:
+    missing_class_name_list = list(desired_class_names - processed_class_names)
+    if missing_class_name_list:
+      missing_class_name_list.sort()
+      sys.stderr.write('Class(es) not found in %s: %s\n' %
+                       (filename, ', '.join(missing_class_name_list)))
+  elif not processed_class_names:
+    sys.stderr.write('No class found in %s\n' % filename)
+
+  return lines
 
 
 def main(argv=sys.argv):
-  if len(argv) != 3:
-    sys.stdout.write(__doc__)
+  if len(argv) < 2:
+    sys.stderr.write('Google Mock Class Generator v%s\n\n' %
+                     '.'.join(map(str, _VERSION)))
+    sys.stderr.write(__doc__)
     return 1
 
   global _INDENT
@@ -127,7 +153,10 @@ def main(argv=sys.argv):
   except:
     sys.stderr.write('Unable to use indent of %s\n' % os.environ.get('INDENT'))
 
-  filename, class_name = argv[1:]
+  filename = argv[1]
+  desired_class_names = None  # None means all classes in the source file.
+  if len(argv) >= 3:
+    desired_class_names = sets.Set(argv[2:])
   source = utils.ReadFile(filename)
   if source is None:
     return 1
@@ -141,7 +170,8 @@ def main(argv=sys.argv):
     # An error message was already printed since we couldn't parse.
     pass
   else:
-    _GenerateMock(filename, source, entire_ast, class_name)
+    lines = _GenerateMocks(filename, source, entire_ast, desired_class_names)
+    sys.stdout.write('\n'.join(lines))
 
 
 if __name__ == '__main__':
