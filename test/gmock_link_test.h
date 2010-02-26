@@ -116,10 +116,11 @@
 
 #include <gmock/gmock.h>
 
-#ifndef _WIN32_WCE
+#if !GTEST_OS_WINDOWS_MOBILE
 #include <errno.h>
 #endif
 
+#include <gmock/internal/gmock-port.h>
 #include <gtest/gtest.h>
 #include <iostream>
 #include <vector>
@@ -146,6 +147,7 @@ using testing::IgnoreResult;
 using testing::Invoke;
 using testing::InvokeArgument;
 using testing::InvokeWithoutArgs;
+using testing::IsNull;
 using testing::Le;
 using testing::Lt;
 using testing::Matcher;
@@ -175,18 +177,18 @@ using testing::WithArg;
 using testing::WithArgs;
 using testing::WithoutArgs;
 
-#ifndef _WIN32_WCE
+#if !GTEST_OS_WINDOWS_MOBILE
 using testing::SetErrnoAndReturn;
-#endif  // _WIN32_WCE
+#endif
 
 #if GTEST_HAS_EXCEPTIONS
 using testing::Throw;
-#endif  // GTEST_HAS_EXCEPTIONS
+#endif
 
 #if GMOCK_HAS_REGEX
 using testing::ContainsRegex;
 using testing::MatchesRegex;
-#endif  // GMOCK_HAS_REGEX
+#endif
 
 class Interface {
  public:
@@ -296,7 +298,7 @@ TEST(LinkTest, TestSetArrayArgument) {
   mock.VoidFromString(&ch);
 }
 
-#ifndef _WIN32_WCE
+#if !GTEST_OS_WINDOWS_MOBILE
 
 // Tests the linkage of the SetErrnoAndReturn action.
 TEST(LinkTest, TestSetErrnoAndReturn) {
@@ -308,7 +310,7 @@ TEST(LinkTest, TestSetErrnoAndReturn) {
   errno = saved_errno;
 }
 
-#endif  // _WIN32_WCE
+#endif  // !GTEST_OS_WINDOWS_MOBILE
 
 // Tests the linkage of the Invoke(function) and Invoke(object, method) actions.
 TEST(LinkTest, TestInvoke) {
@@ -490,6 +492,13 @@ TEST(LinkTest, TestMatcherNotNull) {
   ON_CALL(mock, VoidFromString(NotNull())).WillByDefault(Return());
 }
 
+// Tests the linkage of the IsNull matcher.
+TEST(LinkTest, TestMatcherIsNull) {
+  Mock mock;
+
+  ON_CALL(mock, VoidFromString(IsNull())).WillByDefault(Return());
+}
+
 // Tests the linkage of the Ref matcher.
 TEST(LinkTest, TestMatcherRef) {
   Mock mock;
@@ -501,7 +510,7 @@ TEST(LinkTest, TestMatcherRef) {
 // Tests the linkage of the TypedEq matcher.
 TEST(LinkTest, TestMatcherTypedEq) {
   Mock mock;
-  unsigned long a = 0;
+  long a = 0;
 
   ON_CALL(mock, VoidFromIntRef(TypedEq<int&>(a))).WillByDefault(Return());
 }

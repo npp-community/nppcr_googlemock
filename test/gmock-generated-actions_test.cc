@@ -36,6 +36,7 @@
 #include <gmock/gmock-generated-actions.h>
 
 #include <functional>
+#include <sstream>
 #include <string>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
@@ -55,18 +56,14 @@ using testing::ActionInterface;
 using testing::ByRef;
 using testing::DoAll;
 using testing::Invoke;
-using testing::InvokeArgument;
 using testing::Return;
-using testing::SaveArg;
-using testing::SetArgReferee;
+using testing::ReturnNew;
 using testing::SetArgumentPointee;
 using testing::StaticAssertTypeEq;
 using testing::Unused;
-using testing::WithArg;
 using testing::WithArgs;
-using testing::WithoutArgs;
 
-// Sample functions and functors for testing Invoke() and etc.
+// Sample functions and functors for testing various actions.
 int Nullary() { return 1; }
 
 class NullaryFunctor {
@@ -75,18 +72,10 @@ class NullaryFunctor {
 };
 
 bool g_done = false;
-void VoidNullary() { g_done = true; }
-
-class VoidNullaryFunctor {
- public:
-  void operator()() { g_done = true; }
-};
 
 bool Unary(int x) { return x < 0; }
 
 const char* Plus1(const char* s) { return s + 1; }
-
-void VoidUnary(int n) { g_done = true; }
 
 bool ByConstRef(const string& s) { return s == "Hi"; }
 
@@ -108,10 +97,6 @@ int Ternary(int x, char y, short z) { return x + y + z; }  // NOLINT
 void VoidTernary(int, char, bool) { g_done = true; }
 
 int SumOf4(int a, int b, int c, int d) { return a + b + c + d; }
-
-int SumOfFirst2(int a, int b, Unused, Unused) { return a + b; }
-
-void VoidFunctionWithFourArguments(char, int, float, double) { g_done = true; }
 
 string Concat4(const char* s1, const char* s2, const char* s3,
                const char* s4) {
@@ -171,356 +156,9 @@ string Concat10(const char* s1, const char* s2, const char* s3,
   return string(s1) + s2 + s3 + s4 + s5 + s6 + s7 + s8 + s9 + s10;
 }
 
-class Foo {
- public:
-  Foo() : value_(123) {}
-
-  int Nullary() const { return value_; }
-
-  short Unary(long x) { return static_cast<short>(value_ + x); }  // NOLINT
-
-  string Binary(const string& str, char c) const { return str + c; }
-
-  int Ternary(int x, bool y, char z) { return value_ + x + y*z; }
-
-  int SumOf4(int a, int b, int c, int d) const {
-    return a + b + c + d + value_;
-  }
-
-  int SumOfLast2(Unused, Unused, int a, int b) const { return a + b; }
-
-  int SumOf5(int a, int b, int c, int d, int e) { return a + b + c + d + e; }
-
-  int SumOf6(int a, int b, int c, int d, int e, int f) {
-    return a + b + c + d + e + f;
-  }
-
-  string Concat7(const char* s1, const char* s2, const char* s3,
-                 const char* s4, const char* s5, const char* s6,
-                 const char* s7) {
-    return string(s1) + s2 + s3 + s4 + s5 + s6 + s7;
-  }
-
-  string Concat8(const char* s1, const char* s2, const char* s3,
-                 const char* s4, const char* s5, const char* s6,
-                 const char* s7, const char* s8) {
-    return string(s1) + s2 + s3 + s4 + s5 + s6 + s7 + s8;
-  }
-
-  string Concat9(const char* s1, const char* s2, const char* s3,
-                 const char* s4, const char* s5, const char* s6,
-                 const char* s7, const char* s8, const char* s9) {
-    return string(s1) + s2 + s3 + s4 + s5 + s6 + s7 + s8 + s9;
-  }
-
-  string Concat10(const char* s1, const char* s2, const char* s3,
-                  const char* s4, const char* s5, const char* s6,
-                  const char* s7, const char* s8, const char* s9,
-                  const char* s10) {
-    return string(s1) + s2 + s3 + s4 + s5 + s6 + s7 + s8 + s9 + s10;
-  }
- private:
-  int value_;
-};
-
-// Tests using Invoke() with a nullary function.
-TEST(InvokeTest, Nullary) {
-  Action<int()> a = Invoke(Nullary);  // NOLINT
-  EXPECT_EQ(1, a.Perform(make_tuple()));
-}
-
-// Tests using Invoke() with a unary function.
-TEST(InvokeTest, Unary) {
-  Action<bool(int)> a = Invoke(Unary);  // NOLINT
-  EXPECT_FALSE(a.Perform(make_tuple(1)));
-  EXPECT_TRUE(a.Perform(make_tuple(-1)));
-}
-
-// Tests using Invoke() with a binary function.
-TEST(InvokeTest, Binary) {
-  Action<const char*(const char*, short)> a = Invoke(Binary);  // NOLINT
-  const char* p = "Hello";
-  EXPECT_EQ(p + 2, a.Perform(make_tuple(p, 2)));
-}
-
-// Tests using Invoke() with a ternary function.
-TEST(InvokeTest, Ternary) {
-  Action<int(int, char, short)> a = Invoke(Ternary);  // NOLINT
-  EXPECT_EQ(6, a.Perform(make_tuple(1, '\2', 3)));
-}
-
-// Tests using Invoke() with a 4-argument function.
-TEST(InvokeTest, FunctionThatTakes4Arguments) {
-  Action<int(int, int, int, int)> a = Invoke(SumOf4);  // NOLINT
-  EXPECT_EQ(1234, a.Perform(make_tuple(1000, 200, 30, 4)));
-}
-
-// Tests using Invoke() with a 5-argument function.
-TEST(InvokeTest, FunctionThatTakes5Arguments) {
-  Action<int(int, int, int, int, int)> a = Invoke(SumOf5);  // NOLINT
-  EXPECT_EQ(12345, a.Perform(make_tuple(10000, 2000, 300, 40, 5)));
-}
-
-// Tests using Invoke() with a 6-argument function.
-TEST(InvokeTest, FunctionThatTakes6Arguments) {
-  Action<int(int, int, int, int, int, int)> a = Invoke(SumOf6);  // NOLINT
-  EXPECT_EQ(123456, a.Perform(make_tuple(100000, 20000, 3000, 400, 50, 6)));
-}
-
-// Tests using Invoke() with a 7-argument function.
-TEST(InvokeTest, FunctionThatTakes7Arguments) {
-  Action<string(const char*, const char*, const char*, const char*,
-                const char*, const char*, const char*)> a =
-      Invoke(Concat7);
-  EXPECT_EQ("1234567",
-            a.Perform(make_tuple("1", "2", "3", "4", "5", "6", "7")));
-}
-
-// Tests using Invoke() with a 8-argument function.
-TEST(InvokeTest, FunctionThatTakes8Arguments) {
-  Action<string(const char*, const char*, const char*, const char*,
-                const char*, const char*, const char*, const char*)> a =
-      Invoke(Concat8);
-  EXPECT_EQ("12345678",
-            a.Perform(make_tuple("1", "2", "3", "4", "5", "6", "7", "8")));
-}
-
-// Tests using Invoke() with a 9-argument function.
-TEST(InvokeTest, FunctionThatTakes9Arguments) {
-  Action<string(const char*, const char*, const char*, const char*,
-                const char*, const char*, const char*, const char*,
-                const char*)> a = Invoke(Concat9);
-  EXPECT_EQ("123456789",
-            a.Perform(make_tuple("1", "2", "3", "4", "5", "6", "7", "8", "9")));
-}
-
-// Tests using Invoke() with a 10-argument function.
-TEST(InvokeTest, FunctionThatTakes10Arguments) {
-  Action<string(const char*, const char*, const char*, const char*,
-                const char*, const char*, const char*, const char*,
-                const char*, const char*)> a = Invoke(Concat10);
-  EXPECT_EQ("1234567890", a.Perform(make_tuple("1", "2", "3", "4", "5", "6",
-                                               "7", "8", "9", "0")));
-}
-
-// Tests using Invoke() with functions with parameters declared as Unused.
-TEST(InvokeTest, FunctionWithUnusedParameters) {
-  Action<int(int, int, double, const string&)> a1 =
-      Invoke(SumOfFirst2);
-  EXPECT_EQ(12, a1.Perform(make_tuple(10, 2, 5.6, "hi")));
-
-  Action<int(int, int, bool, int*)> a2 =
-      Invoke(SumOfFirst2);
-  EXPECT_EQ(23, a2.Perform(make_tuple(20, 3, true, static_cast<int*>(NULL))));
-}
-
-// Tests using Invoke() with methods with parameters declared as Unused.
-TEST(InvokeTest, MethodWithUnusedParameters) {
-  Foo foo;
-  Action<int(string, bool, int, int)> a1 =
-      Invoke(&foo, &Foo::SumOfLast2);
-  EXPECT_EQ(12, a1.Perform(make_tuple("hi", true, 10, 2)));
-
-  Action<int(char, double, int, int)> a2 =
-      Invoke(&foo, &Foo::SumOfLast2);
-  EXPECT_EQ(23, a2.Perform(make_tuple('a', 2.5, 20, 3)));
-}
-
-// Tests using Invoke() with a functor.
-TEST(InvokeTest, Functor) {
-  Action<int(short, char)> a = Invoke(plus<short>());  // NOLINT
-  EXPECT_EQ(3, a.Perform(make_tuple(1, 2)));
-}
-
-// Tests using Invoke(f) as an action of a compatible type.
-TEST(InvokeTest, FunctionWithCompatibleType) {
-  Action<long(int, short, char, bool)> a = Invoke(SumOf4);  // NOLINT
-  EXPECT_EQ(4321, a.Perform(make_tuple(4000, 300, 20, true)));
-}
-
-// Tests using Invoke() with an object pointer and a method pointer.
-
-// Tests using Invoke() with a nullary method.
-TEST(InvokeMethodTest, Nullary) {
-  Foo foo;
-  Action<int()> a = Invoke(&foo, &Foo::Nullary);  // NOLINT
-  EXPECT_EQ(123, a.Perform(make_tuple()));
-}
-
-// Tests using Invoke() with a unary method.
-TEST(InvokeMethodTest, Unary) {
-  Foo foo;
-  Action<short(long)> a = Invoke(&foo, &Foo::Unary);  // NOLINT
-  EXPECT_EQ(4123, a.Perform(make_tuple(4000)));
-}
-
-// Tests using Invoke() with a binary method.
-TEST(InvokeMethodTest, Binary) {
-  Foo foo;
-  Action<string(const string&, char)> a = Invoke(&foo, &Foo::Binary);
-  string s("Hell");
-  EXPECT_EQ("Hello", a.Perform(make_tuple(s, 'o')));
-}
-
-// Tests using Invoke() with a ternary method.
-TEST(InvokeMethodTest, Ternary) {
-  Foo foo;
-  Action<int(int, bool, char)> a = Invoke(&foo, &Foo::Ternary);  // NOLINT
-  EXPECT_EQ(1124, a.Perform(make_tuple(1000, true, 1)));
-}
-
-// Tests using Invoke() with a 4-argument method.
-TEST(InvokeMethodTest, MethodThatTakes4Arguments) {
-  Foo foo;
-  Action<int(int, int, int, int)> a = Invoke(&foo, &Foo::SumOf4);  // NOLINT
-  EXPECT_EQ(1357, a.Perform(make_tuple(1000, 200, 30, 4)));
-}
-
-// Tests using Invoke() with a 5-argument method.
-TEST(InvokeMethodTest, MethodThatTakes5Arguments) {
-  Foo foo;
-  Action<int(int, int, int, int, int)> a = Invoke(&foo, &Foo::SumOf5);  // NOLINT
-  EXPECT_EQ(12345, a.Perform(make_tuple(10000, 2000, 300, 40, 5)));
-}
-
-// Tests using Invoke() with a 6-argument method.
-TEST(InvokeMethodTest, MethodThatTakes6Arguments) {
-  Foo foo;
-  Action<int(int, int, int, int, int, int)> a =  // NOLINT
-      Invoke(&foo, &Foo::SumOf6);
-  EXPECT_EQ(123456, a.Perform(make_tuple(100000, 20000, 3000, 400, 50, 6)));
-}
-
-// Tests using Invoke() with a 7-argument method.
-TEST(InvokeMethodTest, MethodThatTakes7Arguments) {
-  Foo foo;
-  Action<string(const char*, const char*, const char*, const char*,
-                const char*, const char*, const char*)> a =
-      Invoke(&foo, &Foo::Concat7);
-  EXPECT_EQ("1234567",
-            a.Perform(make_tuple("1", "2", "3", "4", "5", "6", "7")));
-}
-
-// Tests using Invoke() with a 8-argument method.
-TEST(InvokeMethodTest, MethodThatTakes8Arguments) {
-  Foo foo;
-  Action<string(const char*, const char*, const char*, const char*,
-                const char*, const char*, const char*, const char*)> a =
-      Invoke(&foo, &Foo::Concat8);
-  EXPECT_EQ("12345678",
-            a.Perform(make_tuple("1", "2", "3", "4", "5", "6", "7", "8")));
-}
-
-// Tests using Invoke() with a 9-argument method.
-TEST(InvokeMethodTest, MethodThatTakes9Arguments) {
-  Foo foo;
-  Action<string(const char*, const char*, const char*, const char*,
-                const char*, const char*, const char*, const char*,
-                const char*)> a = Invoke(&foo, &Foo::Concat9);
-  EXPECT_EQ("123456789",
-            a.Perform(make_tuple("1", "2", "3", "4", "5", "6", "7", "8", "9")));
-}
-
-// Tests using Invoke() with a 10-argument method.
-TEST(InvokeMethodTest, MethodThatTakes10Arguments) {
-  Foo foo;
-  Action<string(const char*, const char*, const char*, const char*,
-                const char*, const char*, const char*, const char*,
-                const char*, const char*)> a = Invoke(&foo, &Foo::Concat10);
-  EXPECT_EQ("1234567890", a.Perform(make_tuple("1", "2", "3", "4", "5", "6",
-                                               "7", "8", "9", "0")));
-}
-
-// Tests using Invoke(f) as an action of a compatible type.
-TEST(InvokeMethodTest, MethodWithCompatibleType) {
-  Foo foo;
-  Action<long(int, short, char, bool)> a =  // NOLINT
-      Invoke(&foo, &Foo::SumOf4);
-  EXPECT_EQ(4444, a.Perform(make_tuple(4000, 300, 20, true)));
-}
-
-// Tests ByRef().
-
-// Tests that ReferenceWrapper<T> is copyable.
-TEST(ByRefTest, IsCopyable) {
-  const string s1 = "Hi";
-  const string s2 = "Hello";
-
-  ::testing::internal::ReferenceWrapper<const string> ref_wrapper = ByRef(s1);
-  const string& r1 = ref_wrapper;
-  EXPECT_EQ(&s1, &r1);
-
-  // Assigns a new value to ref_wrapper.
-  ref_wrapper = ByRef(s2);
-  const string& r2 = ref_wrapper;
-  EXPECT_EQ(&s2, &r2);
-
-  ::testing::internal::ReferenceWrapper<const string> ref_wrapper1 = ByRef(s1);
-  // Copies ref_wrapper1 to ref_wrapper.
-  ref_wrapper = ref_wrapper1;
-  const string& r3 = ref_wrapper;
-  EXPECT_EQ(&s1, &r3);
-}
-
-// Tests using ByRef() on a const value.
-TEST(ByRefTest, ConstValue) {
-  const int n = 0;
-  // int& ref = ByRef(n);  // This shouldn't compile - we have a
-                           // negative compilation test to catch it.
-  const int& const_ref = ByRef(n);
-  EXPECT_EQ(&n, &const_ref);
-}
-
-// Tests using ByRef() on a non-const value.
-TEST(ByRefTest, NonConstValue) {
-  int n = 0;
-
-  // ByRef(n) can be used as either an int&,
-  int& ref = ByRef(n);
-  EXPECT_EQ(&n, &ref);
-
-  // or a const int&.
-  const int& const_ref = ByRef(n);
-  EXPECT_EQ(&n, &const_ref);
-}
-
-struct Base {
-  bool operator==(const Base&) { return true; }
-};
-
-struct Derived : public Base {
-  bool operator==(const Derived&) { return true; }
-};
-
-// Tests explicitly specifying the type when using ByRef().
-TEST(ByRefTest, ExplicitType) {
-  int n = 0;
-  const int& r1 = ByRef<const int>(n);
-  EXPECT_EQ(&n, &r1);
-
-  // ByRef<char>(n);  // This shouldn't compile - we have a negative
-                      // compilation test to catch it.
-
-
-  Derived d;
-  Derived& r2 = ByRef<Derived>(d);
-  EXPECT_EQ(&d, &r2);
-
-  const Derived& r3 = ByRef<const Derived>(d);
-  EXPECT_EQ(&d, &r3);
-
-  Base& r4 = ByRef<Base>(d);
-  EXPECT_EQ(&d, &r4);
-
-  const Base& r5 = ByRef<const Base>(d);
-  EXPECT_EQ(&d, &r5);
-
-  // The following shouldn't compile - we have a negative compilation
-  // test for it.
-  //
-  // Base b;
-  // ByRef<Derived>(b);
-}
+// A helper that turns the type of a C-string literal from const
+// char[N] to const char*.
+inline const char* CharPtr(const char* s) { return s; }
 
 // Tests InvokeArgument<N>(...).
 
@@ -639,23 +277,11 @@ TEST(InvokeArgumentTest, ByExplicitConstReferenceFunction) {
   EXPECT_FALSE(a.Perform(make_tuple(&ReferencesGlobalDouble)));
 }
 
-// Tests using WithoutArgs with an action that takes no argument.
-TEST(WithoutArgsTest, NoArg) {
-  Action<int(int n)> a = WithoutArgs(Invoke(Nullary));  // NOLINT
-  EXPECT_EQ(1, a.Perform(make_tuple(2)));
-}
-
-// Tests using WithArgs and WithArg with an action that takes 1 argument.
+// Tests using WithArgs and with an action that takes 1 argument.
 TEST(WithArgsTest, OneArg) {
   Action<bool(double x, int n)> a = WithArgs<1>(Invoke(Unary));  // NOLINT
   EXPECT_TRUE(a.Perform(make_tuple(1.5, -1)));
   EXPECT_FALSE(a.Perform(make_tuple(1.5, 1)));
-
-  // Also tests the synonym WithArg.
-  Action<bool(double x, int n)> b = WithArg<1>(Invoke(Unary));  // NOLINT
-  EXPECT_TRUE(a.Perform(make_tuple(1.5, -1)));
-  EXPECT_FALSE(a.Perform(make_tuple(1.5, 1)));
-
 }
 
 // Tests using WithArgs with an action that takes 2 arguments.
@@ -663,7 +289,7 @@ TEST(WithArgsTest, TwoArgs) {
   Action<const char*(const char* s, double x, int n)> a =
       WithArgs<0, 2>(Invoke(Binary));
   const char s[] = "Hello";
-  EXPECT_EQ(s + 2, a.Perform(make_tuple(s, 0.5, 2)));
+  EXPECT_EQ(s + 2, a.Perform(make_tuple(CharPtr(s), 0.5, 2)));
 }
 
 // Tests using WithArgs with an action that takes 3 arguments.
@@ -677,7 +303,8 @@ TEST(WithArgsTest, ThreeArgs) {
 TEST(WithArgsTest, FourArgs) {
   Action<string(const char*, const char*, double, const char*, const char*)> a =
       WithArgs<4, 3, 1, 0>(Invoke(Concat4));
-  EXPECT_EQ("4310", a.Perform(make_tuple("0", "1", 2.5, "3", "4")));
+  EXPECT_EQ("4310", a.Perform(make_tuple(CharPtr("0"), CharPtr("1"), 2.5,
+                                         CharPtr("3"), CharPtr("4"))));
 }
 
 // Tests using WithArgs with an action that takes 5 arguments.
@@ -685,42 +312,53 @@ TEST(WithArgsTest, FiveArgs) {
   Action<string(const char*, const char*, const char*,
                 const char*, const char*)> a =
       WithArgs<4, 3, 2, 1, 0>(Invoke(Concat5));
-  EXPECT_EQ("43210", a.Perform(make_tuple("0", "1", "2", "3", "4")));
+  EXPECT_EQ("43210",
+            a.Perform(make_tuple(CharPtr("0"), CharPtr("1"), CharPtr("2"),
+                                 CharPtr("3"), CharPtr("4"))));
 }
 
 // Tests using WithArgs with an action that takes 6 arguments.
 TEST(WithArgsTest, SixArgs) {
   Action<string(const char*, const char*, const char*)> a =
       WithArgs<0, 1, 2, 2, 1, 0>(Invoke(Concat6));
-  EXPECT_EQ("012210", a.Perform(make_tuple("0", "1", "2")));
+  EXPECT_EQ("012210",
+            a.Perform(make_tuple(CharPtr("0"), CharPtr("1"), CharPtr("2"))));
 }
 
 // Tests using WithArgs with an action that takes 7 arguments.
 TEST(WithArgsTest, SevenArgs) {
   Action<string(const char*, const char*, const char*, const char*)> a =
       WithArgs<0, 1, 2, 3, 2, 1, 0>(Invoke(Concat7));
-  EXPECT_EQ("0123210", a.Perform(make_tuple("0", "1", "2", "3")));
+  EXPECT_EQ("0123210",
+            a.Perform(make_tuple(CharPtr("0"), CharPtr("1"), CharPtr("2"),
+                                 CharPtr("3"))));
 }
 
 // Tests using WithArgs with an action that takes 8 arguments.
 TEST(WithArgsTest, EightArgs) {
   Action<string(const char*, const char*, const char*, const char*)> a =
       WithArgs<0, 1, 2, 3, 0, 1, 2, 3>(Invoke(Concat8));
-  EXPECT_EQ("01230123", a.Perform(make_tuple("0", "1", "2", "3")));
+  EXPECT_EQ("01230123",
+            a.Perform(make_tuple(CharPtr("0"), CharPtr("1"), CharPtr("2"),
+                                 CharPtr("3"))));
 }
 
 // Tests using WithArgs with an action that takes 9 arguments.
 TEST(WithArgsTest, NineArgs) {
   Action<string(const char*, const char*, const char*, const char*)> a =
       WithArgs<0, 1, 2, 3, 1, 2, 3, 2, 3>(Invoke(Concat9));
-  EXPECT_EQ("012312323", a.Perform(make_tuple("0", "1", "2", "3")));
+  EXPECT_EQ("012312323",
+            a.Perform(make_tuple(CharPtr("0"), CharPtr("1"), CharPtr("2"),
+                                 CharPtr("3"))));
 }
 
 // Tests using WithArgs with an action that takes 10 arguments.
 TEST(WithArgsTest, TenArgs) {
   Action<string(const char*, const char*, const char*, const char*)> a =
       WithArgs<0, 1, 2, 3, 2, 1, 0, 1, 2, 3>(Invoke(Concat10));
-  EXPECT_EQ("0123210123", a.Perform(make_tuple("0", "1", "2", "3")));
+  EXPECT_EQ("0123210123",
+            a.Perform(make_tuple(CharPtr("0"), CharPtr("1"), CharPtr("2"),
+                                 CharPtr("3"))));
 }
 
 // Tests using WithArgs with an action that is not Invoke().
@@ -734,7 +372,7 @@ class SubstractAction : public ActionInterface<int(int, int)> {  // NOLINT
 TEST(WithArgsTest, NonInvokeAction) {
   Action<int(const string&, int, int)> a =  // NOLINT
       WithArgs<2, 1>(MakeAction(new SubstractAction));
-  EXPECT_EQ(8, a.Perform(make_tuple("hi", 2, 10)));
+  EXPECT_EQ(8, a.Perform(make_tuple(CharPtr("hi"), 2, 10)));
 }
 
 // Tests using WithArgs to pass all original arguments in the original order.
@@ -756,7 +394,7 @@ TEST(WithArgsTest, ReversedArgumentOrder) {
   Action<const char*(short n, const char* input)> a =  // NOLINT
       WithArgs<1, 0>(Invoke(Binary));
   const char s[] = "Hello";
-  EXPECT_EQ(s + 2, a.Perform(make_tuple(2, s)));
+  EXPECT_EQ(s + 2, a.Perform(make_tuple(2, CharPtr(s))));
 }
 
 // Tests using WithArgs with compatible, but not identical, argument types.
@@ -1121,16 +759,16 @@ TEST(ActionMacroTest, CanDefineOverloadedActions) {
   typedef Action<const char*(bool, const char*)> MyAction;
 
   const MyAction a1 = OverloadedAction();
-  EXPECT_STREQ("hello", a1.Perform(make_tuple(false, "world")));
-  EXPECT_STREQ("world", a1.Perform(make_tuple(true, "world")));
+  EXPECT_STREQ("hello", a1.Perform(make_tuple(false, CharPtr("world"))));
+  EXPECT_STREQ("world", a1.Perform(make_tuple(true, CharPtr("world"))));
 
   const MyAction a2 = OverloadedAction("hi");
-  EXPECT_STREQ("hi", a2.Perform(make_tuple(false, "world")));
-  EXPECT_STREQ("world", a2.Perform(make_tuple(true, "world")));
+  EXPECT_STREQ("hi", a2.Perform(make_tuple(false, CharPtr("world"))));
+  EXPECT_STREQ("world", a2.Perform(make_tuple(true, CharPtr("world"))));
 
   const MyAction a3 = OverloadedAction("hi", "you");
-  EXPECT_STREQ("hi", a3.Perform(make_tuple(true, "world")));
-  EXPECT_STREQ("you", a3.Perform(make_tuple(false, "world")));
+  EXPECT_STREQ("hi", a3.Perform(make_tuple(true, CharPtr("world"))));
+  EXPECT_STREQ("you", a3.Perform(make_tuple(false, CharPtr("world"))));
 }
 
 // Tests ACTION_Pn where n >= 3.
@@ -1222,8 +860,8 @@ TEST(ActionPnMacroTest, SimpleTypePromotion) {
       PadArgument(std::string("foo"), 'r');
   Action<std::string(const char*)> promo =
       PadArgument("foo", static_cast<int>('r'));
-  EXPECT_EQ("foobar", no_promo.Perform(make_tuple("ba")));
-  EXPECT_EQ("foobar", promo.Perform(make_tuple("ba")));
+  EXPECT_EQ("foobar", no_promo.Perform(make_tuple(CharPtr("ba"))));
+  EXPECT_EQ("foobar", promo.Perform(make_tuple(CharPtr("ba"))));
 }
 
 // Tests that we can partially restrict parameter types using a
@@ -1336,61 +974,221 @@ TEST(ActionPnMacroTest, CanExplicitlyInstantiateWithReferenceTypes) {
   EXPECT_EQ(55, a.Perform(empty));
 }
 
-TEST(SaveArgActionTest, WorksForSameType) {
-  int result = 0;
-  const Action<void(int n)> a1 = SaveArg<0>(&result);
-  a1.Perform(make_tuple(5));
-  EXPECT_EQ(5, result);
+class NullaryConstructorClass {
+ public:
+  NullaryConstructorClass() : value_(123) {}
+  int value_;
+};
+
+// Tests using ReturnNew() with a nullary constructor.
+TEST(ReturnNewTest, NoArgs) {
+  Action<NullaryConstructorClass*()> a = ReturnNew<NullaryConstructorClass>();
+  NullaryConstructorClass* c = a.Perform(make_tuple());
+  EXPECT_EQ(123, c->value_);
+  delete c;
 }
 
-TEST(SaveArgActionTest, WorksForCompatibleType) {
-  int result = 0;
-  const Action<void(bool, char)> a1 = SaveArg<1>(&result);
-  a1.Perform(make_tuple(true, 'a'));
-  EXPECT_EQ('a', result);
+class UnaryConstructorClass {
+ public:
+  explicit UnaryConstructorClass(int value) : value_(value) {}
+  int value_;
+};
+
+// Tests using ReturnNew() with a unary constructor.
+TEST(ReturnNewTest, Unary) {
+  Action<UnaryConstructorClass*()> a = ReturnNew<UnaryConstructorClass>(4000);
+  UnaryConstructorClass* c = a.Perform(make_tuple());
+  EXPECT_EQ(4000, c->value_);
+  delete c;
 }
 
-TEST(SetArgRefereeActionTest, WorksForSameType) {
-  int value = 0;
-  const Action<void(int&)> a1 = SetArgReferee<0>(1);
-  a1.Perform(tuple<int&>(value));
-  EXPECT_EQ(1, value);
+TEST(ReturnNewTest, UnaryWorksWhenMockMethodHasArgs) {
+  Action<UnaryConstructorClass*(bool, int)> a =
+      ReturnNew<UnaryConstructorClass>(4000);
+  UnaryConstructorClass* c = a.Perform(make_tuple(false, 5));
+  EXPECT_EQ(4000, c->value_);
+  delete c;
 }
 
-TEST(SetArgRefereeActionTest, WorksForCompatibleType) {
-  int value = 0;
-  const Action<void(int, int&)> a1 = SetArgReferee<1>('a');
-  a1.Perform(tuple<int, int&>(0, value));
-  EXPECT_EQ('a', value);
+TEST(ReturnNewTest, UnaryWorksWhenMockMethodReturnsPointerToConst) {
+  Action<const UnaryConstructorClass*()> a =
+      ReturnNew<UnaryConstructorClass>(4000);
+  const UnaryConstructorClass* c = a.Perform(make_tuple());
+  EXPECT_EQ(4000, c->value_);
+  delete c;
 }
 
-TEST(SetArgRefereeActionTest, WorksWithExtraArguments) {
-  int value = 0;
-  const Action<void(bool, int, int&, const char*)> a1 = SetArgReferee<2>('a');
-  a1.Perform(tuple<bool, int, int&, const char*>(true, 0, value, "hi"));
-  EXPECT_EQ('a', value);
+class TenArgConstructorClass {
+ public:
+  TenArgConstructorClass(int a1, int a2, int a3, int a4, int a5,
+                         int a6, int a7, int a8, int a9, int a10)
+    : value_(a1 + a2 + a3 + a4 + a5 + a6 + a7 + a8 + a9 + a10) {
+  }
+  int value_;
+};
+
+// Tests using ReturnNew() with a 10-argument constructor.
+TEST(ReturnNewTest, ConstructorThatTakes10Arguments) {
+  Action<TenArgConstructorClass*()> a =
+      ReturnNew<TenArgConstructorClass>(1000000000, 200000000, 30000000,
+                                        4000000, 500000, 60000,
+                                        7000, 800, 90, 0);
+  TenArgConstructorClass* c = a.Perform(make_tuple());
+  EXPECT_EQ(1234567890, c->value_);
+  delete c;
 }
 
-#if GTEST_HAS_EXCEPTIONS
-
-TEST(ThrowActionTest, ThrowsGivenExceptionInVoidFunction) {
-  const Action<void(int n)> a = Throw('a');
-  EXPECT_THROW(a.Perform(make_tuple(0)), char);
+// Tests that ACTION_TEMPLATE works when there is no value parameter.
+ACTION_TEMPLATE(CreateNew,
+                HAS_1_TEMPLATE_PARAMS(typename, T),
+                AND_0_VALUE_PARAMS()) {
+  return new T;
 }
 
-class MyException {};
-
-TEST(ThrowActionTest, ThrowsGivenExceptionInNonVoidFunction) {
-  const Action<double(char ch)> a = Throw(MyException());
-  EXPECT_THROW(a.Perform(make_tuple('0')), MyException);
+TEST(ActionTemplateTest, WorksWithoutValueParam) {
+  const Action<int*()> a = CreateNew<int>();
+  int* p = a.Perform(make_tuple());
+  delete p;
 }
 
-TEST(ThrowActionTest, ThrowsGivenExceptionInNullaryFunction) {
-  const Action<double()> a = Throw(MyException());
-  EXPECT_THROW(a.Perform(make_tuple()), MyException);
+// Tests that ACTION_TEMPLATE works when there are value parameters.
+ACTION_TEMPLATE(CreateNew,
+                HAS_1_TEMPLATE_PARAMS(typename, T),
+                AND_1_VALUE_PARAMS(a0)) {
+  return new T(a0);
 }
 
-#endif  // GTEST_HAS_EXCEPTIONS
+TEST(ActionTemplateTest, WorksWithValueParams) {
+  const Action<int*()> a = CreateNew<int>(42);
+  int* p = a.Perform(make_tuple());
+  EXPECT_EQ(42, *p);
+  delete p;
+}
+
+// Tests that ACTION_TEMPLATE works for integral template parameters.
+ACTION_TEMPLATE(MyDeleteArg,
+                HAS_1_TEMPLATE_PARAMS(int, k),
+                AND_0_VALUE_PARAMS()) {
+  delete std::tr1::get<k>(args);
+}
+
+// Resets a bool variable in the destructor.
+class BoolResetter {
+ public:
+  explicit BoolResetter(bool* value) : value_(value) {}
+  ~BoolResetter() { *value_ = false; }
+ private:
+  bool* const value_;
+};
+
+TEST(ActionTemplateTest, WorksForIntegralTemplateParams) {
+  const Action<void(int*, BoolResetter*)> a = MyDeleteArg<1>();
+  int n = 0;
+  bool b = true;
+  BoolResetter* resetter = new BoolResetter(&b);
+  a.Perform(make_tuple(&n, resetter));
+  EXPECT_FALSE(b);  // Verifies that resetter is deleted.
+}
+
+// Tests that ACTION_TEMPLATES works for template template parameters.
+ACTION_TEMPLATE(ReturnSmartPointer,
+                HAS_1_TEMPLATE_PARAMS(template <typename Pointee> class,
+                                      Pointer),
+                AND_1_VALUE_PARAMS(pointee)) {
+  return Pointer<pointee_type>(new pointee_type(pointee));
+}
+
+TEST(ActionTemplateTest, WorksForTemplateTemplateParameters) {
+  using ::testing::internal::linked_ptr;
+  const Action<linked_ptr<int>()> a = ReturnSmartPointer<linked_ptr>(42);
+  linked_ptr<int> p = a.Perform(make_tuple());
+  EXPECT_EQ(42, *p);
+}
+
+// Tests that ACTION_TEMPLATE works for 10 template parameters.
+template <typename T1, typename T2, typename T3, int k4, bool k5,
+          unsigned int k6, typename T7, typename T8, typename T9>
+struct GiantTemplate {
+ public:
+  explicit GiantTemplate(int a_value) : value(a_value) {}
+  int value;
+};
+
+ACTION_TEMPLATE(ReturnGiant,
+                HAS_10_TEMPLATE_PARAMS(
+                    typename, T1,
+                    typename, T2,
+                    typename, T3,
+                    int, k4,
+                    bool, k5,
+                    unsigned int, k6,
+                    class, T7,
+                    class, T8,
+                    class, T9,
+                    template <typename T> class, T10),
+                AND_1_VALUE_PARAMS(value)) {
+  return GiantTemplate<T10<T1>, T2, T3, k4, k5, k6, T7, T8, T9>(value);
+}
+
+TEST(ActionTemplateTest, WorksFor10TemplateParameters) {
+  using ::testing::internal::linked_ptr;
+  typedef GiantTemplate<linked_ptr<int>, bool, double, 5,
+      true, 6, char, unsigned, int> Giant;
+  const Action<Giant()> a = ReturnGiant<
+      int, bool, double, 5, true, 6, char, unsigned, int, linked_ptr>(42);
+  Giant giant = a.Perform(make_tuple());
+  EXPECT_EQ(42, giant.value);
+}
+
+// Tests that ACTION_TEMPLATE works for 10 value parameters.
+ACTION_TEMPLATE(ReturnSum,
+                HAS_1_TEMPLATE_PARAMS(typename, Number),
+                AND_10_VALUE_PARAMS(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10)) {
+  return static_cast<Number>(v1) + v2 + v3 + v4 + v5 + v6 + v7 + v8 + v9 + v10;
+}
+
+TEST(ActionTemplateTest, WorksFor10ValueParameters) {
+  const Action<int()> a = ReturnSum<int>(1, 2, 3, 4, 5, 6, 7, 8, 9, 10);
+  EXPECT_EQ(55, a.Perform(make_tuple()));
+}
+
+// Tests that ACTION_TEMPLATE and ACTION/ACTION_P* can be overloaded
+// on the number of value parameters.
+
+ACTION(ReturnSum) { return 0; }
+
+ACTION_P(ReturnSum, x) { return x; }
+
+ACTION_TEMPLATE(ReturnSum,
+                HAS_1_TEMPLATE_PARAMS(typename, Number),
+                AND_2_VALUE_PARAMS(v1, v2)) {
+  return static_cast<Number>(v1) + v2;
+}
+
+ACTION_TEMPLATE(ReturnSum,
+                HAS_1_TEMPLATE_PARAMS(typename, Number),
+                AND_3_VALUE_PARAMS(v1, v2, v3)) {
+  return static_cast<Number>(v1) + v2 + v3;
+}
+
+ACTION_TEMPLATE(ReturnSum,
+                HAS_2_TEMPLATE_PARAMS(typename, Number, int, k),
+                AND_4_VALUE_PARAMS(v1, v2, v3, v4)) {
+  return static_cast<Number>(v1) + v2 + v3 + v4 + k;
+}
+
+TEST(ActionTemplateTest, CanBeOverloadedOnNumberOfValueParameters) {
+  const Action<int()> a0 = ReturnSum();
+  const Action<int()> a1 = ReturnSum(1);
+  const Action<int()> a2 = ReturnSum<int>(1, 2);
+  const Action<int()> a3 = ReturnSum<int>(1, 2, 3);
+  const Action<int()> a4 = ReturnSum<int, 10000>(2000, 300, 40, 5);
+  EXPECT_EQ(0, a0.Perform(make_tuple()));
+  EXPECT_EQ(1, a1.Perform(make_tuple()));
+  EXPECT_EQ(3, a2.Perform(make_tuple()));
+  EXPECT_EQ(6, a3.Perform(make_tuple()));
+  EXPECT_EQ(12345, a4.Perform(make_tuple()));
+}
 
 }  // namespace gmock_generated_actions_test
 }  // namespace testing

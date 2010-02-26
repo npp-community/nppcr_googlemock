@@ -154,10 +154,13 @@ using ::std::tr1::tuple;
 using ::std::vector;
 using ::testing::ElementsAre;
 using ::testing::StartsWith;
+using ::testing::internal::NativeArray;
 using ::testing::internal::Strings;
 using ::testing::internal::UniversalTersePrint;
+using ::testing::internal::UniversalPrint;
 using ::testing::internal::UniversalTersePrintTupleFieldsToStrings;
 using ::testing::internal::UniversalPrinter;
+using ::testing::internal::kReference;
 using ::testing::internal::string;
 
 #if GTEST_OS_WINDOWS
@@ -485,75 +488,58 @@ TEST(PrintPointerTest, MemberFunctionPointer) {
 
 // Tests printing C arrays.
 
-// One-dimensional array.
-
-void ArrayHelper1(int (&a)[5]) {  // NOLINT
-  EXPECT_EQ("{ 1, 2, 3, 4, 5 }", Print(a));
+// The difference between this and Print() is that it ensures that the
+// argument is a reference to an array.
+template <typename T, size_t N>
+string PrintArrayHelper(T (&a)[N]) {
+  return Print(a);
 }
 
+// One-dimensional array.
 TEST(PrintArrayTest, OneDimensionalArray) {
   int a[5] = { 1, 2, 3, 4, 5 };
-  ArrayHelper1(a);
+  EXPECT_EQ("{ 1, 2, 3, 4, 5 }", PrintArrayHelper(a));
 }
 
 // Two-dimensional array.
-
-void ArrayHelper2(int (&a)[2][5]) {  // NOLINT
-  EXPECT_EQ("{ { 1, 2, 3, 4, 5 }, { 6, 7, 8, 9, 0 } }", Print(a));
-}
-
 TEST(PrintArrayTest, TwoDimensionalArray) {
   int a[2][5] = {
     { 1, 2, 3, 4, 5 },
     { 6, 7, 8, 9, 0 }
   };
-  ArrayHelper2(a);
+  EXPECT_EQ("{ { 1, 2, 3, 4, 5 }, { 6, 7, 8, 9, 0 } }", PrintArrayHelper(a));
 }
 
 // Array of const elements.
-
-void ArrayHelper3(const bool (&a)[1]) {  // NOLINT
-  EXPECT_EQ("{ false }", Print(a));
-}
-
 TEST(PrintArrayTest, ConstArray) {
   const bool a[1] = { false };
-  ArrayHelper3(a);
+  EXPECT_EQ("{ false }", PrintArrayHelper(a));
 }
 
 // Char array.
-
-void ArrayHelper4(char (&a)[3]) {  // NOLINT
-  EXPECT_EQ(PrintPointer(a) + " pointing to \"Hi\"", Print(a));
-}
-
 TEST(PrintArrayTest, CharArray) {
-  char a[3] = "Hi";
-  ArrayHelper4(a);
+  // Array a contains '\0' in the middle and doesn't end with '\0'.
+  char a[3] = { 'H', '\0', 'i' };
+  EXPECT_EQ("\"H\\0i\"", PrintArrayHelper(a));
 }
 
 // Const char array.
-
-void ArrayHelper5(const char (&a)[3]) {  // NOLINT
-  EXPECT_EQ(Print(a), PrintPointer(a) + " pointing to \"Hi\"");
-}
-
 TEST(PrintArrayTest, ConstCharArray) {
-  const char a[3] = "Hi";
-  ArrayHelper5(a);
+  const char a[4] = "\0Hi";
+  EXPECT_EQ("\"\\0Hi\\0\"", PrintArrayHelper(a));
 }
 
 // Array of objects.
 TEST(PrintArrayTest, ObjectArray) {
   string a[3] = { "Hi", "Hello", "Ni hao" };
-  EXPECT_EQ("{ \"Hi\", \"Hello\", \"Ni hao\" }", Print(a));
+  EXPECT_EQ("{ \"Hi\", \"Hello\", \"Ni hao\" }", PrintArrayHelper(a));
 }
 
 // Array with many elements.
 TEST(PrintArrayTest, BigArray) {
   int a[100] = { 1, 2, 3 };
   EXPECT_EQ("{ 1, 2, 3, 0, 0, 0, 0, 0, ..., 0, 0, 0, 0, 0, 0, 0, 0 }",
-            Print(a));
+            PrintArrayHelper(a));
 }
 
 // Tests printing ::string and ::std::string.
@@ -719,7 +705,7 @@ TEST(PrintStlContainerTest, HashMultiSet) {
   std::vector<int> numbers;
   for (size_t i = 0; i != result.length(); i++) {
     if (expected_pattern[i] == 'd') {
-      ASSERT_TRUE(isdigit(result[i]));
+      ASSERT_TRUE(isdigit(result[i]) != 0);
       numbers.push_back(result[i] - '0');
     } else {
       EXPECT_EQ(expected_pattern[i], result[i]) << " where result is "
@@ -803,6 +789,17 @@ TEST(PrintStlContainerTest, NestedContainer) {
   EXPECT_EQ("{ { 1, 2 }, { 3, 4, 5 } }", Print(v));
 }
 
+TEST(PrintStlContainerTest, OneDimensionalNativeArray) {
+  const int a[3] = { 1, 2, 3 };
+  NativeArray<int> b(a, 3, kReference);
+  EXPECT_EQ("{ 1, 2, 3 }", Print(b));
+}
+
+TEST(PrintStlContainerTest, TwoDimensionalNativeArray) {
+  const int a[2][3] = { { 1, 2, 3 }, { 4, 5, 6 } };
+  NativeArray<int[3]> b(a, 2, kReference);
+  EXPECT_EQ("{ { 1, 2, 3 }, { 4, 5, 6 } }", Print(b));
+}
 
 // Tests printing tuples.
 
@@ -843,16 +840,16 @@ TEST(PrintTupleTest, VariousSizes) {
   const char* const str = "8";
   tuple<bool, char, short, testing::internal::Int32,  // NOLINT
       testing::internal::Int64, float, double, const char*, void*, string>
-      t10(false, 'a', 3, 4, 5, 6.5F, 7.5, str, NULL, "10");
-  EXPECT_EQ("(false, 'a' (97), 3, 4, 5, 6.5, 7.5, " + PrintPointer(str) +
+      t10(false, 'a', 3, 4, 5, 1.5F, -2.5, str, NULL, "10");
+  EXPECT_EQ("(false, 'a' (97), 3, 4, 5, 1.5, -2.5, " + PrintPointer(str) +
             " pointing to \"8\", NULL, \"10\")",
             Print(t10));
 }
 
 // Nested tuples.
 TEST(PrintTupleTest, NestedTuple) {
-  tuple<tuple<int, double>, char> nested(make_tuple(5, 9.5), 'a');
-  EXPECT_EQ("((5, 9.5), 'a' (97))", Print(nested));
+  tuple<tuple<int, bool>, char> nested(make_tuple(5, true), 'a');
+  EXPECT_EQ("((5, true), 'a' (97))", Print(nested));
 }
 
 // Tests printing user-defined unprintable types.
@@ -922,12 +919,31 @@ TEST(PrintProtocolMessageTest, PrintsShortDebugString) {
   EXPECT_EQ("<member:\"yes\">", Print(msg));
 }
 
-// Tests printing a proto2 message.
-TEST(PrintProto2MessageTest, PrintsShortDebugString) {
+// Tests printing a short proto2 message.
+TEST(PrintProto2MessageTest, PrintsShortDebugStringWhenItIsShort) {
   testing::internal::FooMessage msg;
   msg.set_int_field(2);
+  msg.set_string_field("hello");
   EXPECT_PRED2(RE::FullMatch, Print(msg),
-               "<int_field:\\s*2\\s*>");
+               "<int_field:\\s*2\\s+string_field:\\s*\"hello\">");
+}
+
+// Tests printing a long proto2 message.
+TEST(PrintProto2MessageTest, PrintsDebugStringWhenItIsLong) {
+  testing::internal::FooMessage msg;
+  msg.set_int_field(2);
+  msg.set_string_field("hello");
+  msg.add_names("peter");
+  msg.add_names("paul");
+  msg.add_names("mary");
+  EXPECT_PRED2(RE::FullMatch, Print(msg),
+               "<\n"
+               "int_field:\\s*2\n"
+               "string_field:\\s*\"hello\"\n"
+               "names:\\s*\"peter\"\n"
+               "names:\\s*\"paul\"\n"
+               "names:\\s*\"mary\"\n"
+               ">");
 }
 
 #endif  // GMOCK_HAS_PROTOBUF_
@@ -995,6 +1011,11 @@ TEST(PrintToStringTest, WorksForReference) {
             UniversalPrinter<const int&>::PrintToString(n));
 }
 
+TEST(PrintToStringTest, WorksForArray) {
+  int n[3] = { 1, 2, 3 };
+  EXPECT_EQ("{ 1, 2, 3 }", UniversalPrinter<int[3]>::PrintToString(n));
+}
+
 TEST(UniversalTersePrintTest, WorksForNonReference) {
   ::std::stringstream ss;
   UniversalTersePrint(123, &ss);
@@ -1024,6 +1045,37 @@ TEST(UniversalTersePrintTest, WorksForCString) {
   UniversalTersePrint(s3, &ss3);
   EXPECT_EQ("NULL", ss3.str());
 }
+
+TEST(UniversalPrintTest, WorksForNonReference) {
+  ::std::stringstream ss;
+  UniversalPrint(123, &ss);
+  EXPECT_EQ("123", ss.str());
+}
+
+TEST(UniversalPrintTest, WorksForReference) {
+  const int& n = 123;
+  ::std::stringstream ss;
+  UniversalPrint(n, &ss);
+  EXPECT_EQ("123", ss.str());
+}
+
+TEST(UniversalPrintTest, WorksForCString) {
+  const char* s1 = "abc";
+  ::std::stringstream ss1;
+  UniversalPrint(s1, &ss1);
+  EXPECT_EQ(PrintPointer(s1) + " pointing to \"abc\"", string(ss1.str()));
+
+  char* s2 = const_cast<char*>(s1);
+  ::std::stringstream ss2;
+  UniversalPrint(s2, &ss2);
+  EXPECT_EQ(PrintPointer(s2) + " pointing to \"abc\"", string(ss2.str()));
+
+  const char* s3 = NULL;
+  ::std::stringstream ss3;
+  UniversalPrint(s3, &ss3);
+  EXPECT_EQ("NULL", ss3.str());
+}
+
 
 TEST(UniversalTersePrintTupleFieldsToStringsTest, PrintsEmptyTuple) {
   EXPECT_THAT(UniversalTersePrintTupleFieldsToStrings(make_tuple()),

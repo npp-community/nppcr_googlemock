@@ -45,157 +45,252 @@
 namespace testing {
 namespace internal {
 
-// Implements ElementsAre() and ElementsAreArray().
-template <typename Container>
-class ElementsAreMatcherImpl : public MatcherInterface<Container> {
+// The type of the i-th (0-based) field of Tuple.
+#define GMOCK_FIELD_TYPE_(Tuple, i) \
+    typename ::std::tr1::tuple_element<i, Tuple>::type
+
+// TupleFields<Tuple, k0, ..., kn> is for selecting fields from a
+// tuple of type Tuple.  It has two members:
+//
+//   type: a tuple type whose i-th field is the ki-th field of Tuple.
+//   GetSelectedFields(t): returns fields k0, ..., and kn of t as a tuple.
+//
+// For example, in class TupleFields<tuple<bool, char, int>, 2, 0>, we have:
+//
+//   type is tuple<int, bool>, and
+//   GetSelectedFields(make_tuple(true, 'a', 42)) is (42, true).
+
+template <class Tuple, int k0 = -1, int k1 = -1, int k2 = -1, int k3 = -1,
+    int k4 = -1, int k5 = -1, int k6 = -1, int k7 = -1, int k8 = -1,
+    int k9 = -1>
+class TupleFields;
+
+// This generic version is used when there are 10 selectors.
+template <class Tuple, int k0, int k1, int k2, int k3, int k4, int k5, int k6,
+    int k7, int k8, int k9>
+class TupleFields {
  public:
-  typedef GMOCK_REMOVE_CONST_(GMOCK_REMOVE_REFERENCE_(Container)) RawContainer;
-  typedef typename RawContainer::value_type Element;
+  typedef ::std::tr1::tuple<GMOCK_FIELD_TYPE_(Tuple, k0),
+      GMOCK_FIELD_TYPE_(Tuple, k1), GMOCK_FIELD_TYPE_(Tuple, k2),
+      GMOCK_FIELD_TYPE_(Tuple, k3), GMOCK_FIELD_TYPE_(Tuple, k4),
+      GMOCK_FIELD_TYPE_(Tuple, k5), GMOCK_FIELD_TYPE_(Tuple, k6),
+      GMOCK_FIELD_TYPE_(Tuple, k7), GMOCK_FIELD_TYPE_(Tuple, k8),
+      GMOCK_FIELD_TYPE_(Tuple, k9)> type;
+  static type GetSelectedFields(const Tuple& t) {
+    using ::std::tr1::get;
+    return type(get<k0>(t), get<k1>(t), get<k2>(t), get<k3>(t), get<k4>(t),
+        get<k5>(t), get<k6>(t), get<k7>(t), get<k8>(t), get<k9>(t));
+  }
+};
 
-  // Constructs the matcher from a sequence of element values or
-  // element matchers.
-  template <typename InputIter>
-  ElementsAreMatcherImpl(InputIter first, size_t count) {
-    matchers_.reserve(count);
-    InputIter it = first;
-    for (size_t i = 0; i != count; ++i, ++it) {
-      matchers_.push_back(MatcherCast<const Element&>(*it));
-    }
+// The following specialization is used for 0 ~ 9 selectors.
+
+template <class Tuple>
+class TupleFields<Tuple, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1> {
+ public:
+  typedef ::std::tr1::tuple<> type;
+  static type GetSelectedFields(const Tuple& t) {
+    using ::std::tr1::get;
+    return type();
+  }
+};
+
+template <class Tuple, int k0>
+class TupleFields<Tuple, k0, -1, -1, -1, -1, -1, -1, -1, -1, -1> {
+ public:
+  typedef ::std::tr1::tuple<GMOCK_FIELD_TYPE_(Tuple, k0)> type;
+  static type GetSelectedFields(const Tuple& t) {
+    using ::std::tr1::get;
+    return type(get<k0>(t));
+  }
+};
+
+template <class Tuple, int k0, int k1>
+class TupleFields<Tuple, k0, k1, -1, -1, -1, -1, -1, -1, -1, -1> {
+ public:
+  typedef ::std::tr1::tuple<GMOCK_FIELD_TYPE_(Tuple, k0),
+      GMOCK_FIELD_TYPE_(Tuple, k1)> type;
+  static type GetSelectedFields(const Tuple& t) {
+    using ::std::tr1::get;
+    return type(get<k0>(t), get<k1>(t));
+  }
+};
+
+template <class Tuple, int k0, int k1, int k2>
+class TupleFields<Tuple, k0, k1, k2, -1, -1, -1, -1, -1, -1, -1> {
+ public:
+  typedef ::std::tr1::tuple<GMOCK_FIELD_TYPE_(Tuple, k0),
+      GMOCK_FIELD_TYPE_(Tuple, k1), GMOCK_FIELD_TYPE_(Tuple, k2)> type;
+  static type GetSelectedFields(const Tuple& t) {
+    using ::std::tr1::get;
+    return type(get<k0>(t), get<k1>(t), get<k2>(t));
+  }
+};
+
+template <class Tuple, int k0, int k1, int k2, int k3>
+class TupleFields<Tuple, k0, k1, k2, k3, -1, -1, -1, -1, -1, -1> {
+ public:
+  typedef ::std::tr1::tuple<GMOCK_FIELD_TYPE_(Tuple, k0),
+      GMOCK_FIELD_TYPE_(Tuple, k1), GMOCK_FIELD_TYPE_(Tuple, k2),
+      GMOCK_FIELD_TYPE_(Tuple, k3)> type;
+  static type GetSelectedFields(const Tuple& t) {
+    using ::std::tr1::get;
+    return type(get<k0>(t), get<k1>(t), get<k2>(t), get<k3>(t));
+  }
+};
+
+template <class Tuple, int k0, int k1, int k2, int k3, int k4>
+class TupleFields<Tuple, k0, k1, k2, k3, k4, -1, -1, -1, -1, -1> {
+ public:
+  typedef ::std::tr1::tuple<GMOCK_FIELD_TYPE_(Tuple, k0),
+      GMOCK_FIELD_TYPE_(Tuple, k1), GMOCK_FIELD_TYPE_(Tuple, k2),
+      GMOCK_FIELD_TYPE_(Tuple, k3), GMOCK_FIELD_TYPE_(Tuple, k4)> type;
+  static type GetSelectedFields(const Tuple& t) {
+    using ::std::tr1::get;
+    return type(get<k0>(t), get<k1>(t), get<k2>(t), get<k3>(t), get<k4>(t));
+  }
+};
+
+template <class Tuple, int k0, int k1, int k2, int k3, int k4, int k5>
+class TupleFields<Tuple, k0, k1, k2, k3, k4, k5, -1, -1, -1, -1> {
+ public:
+  typedef ::std::tr1::tuple<GMOCK_FIELD_TYPE_(Tuple, k0),
+      GMOCK_FIELD_TYPE_(Tuple, k1), GMOCK_FIELD_TYPE_(Tuple, k2),
+      GMOCK_FIELD_TYPE_(Tuple, k3), GMOCK_FIELD_TYPE_(Tuple, k4),
+      GMOCK_FIELD_TYPE_(Tuple, k5)> type;
+  static type GetSelectedFields(const Tuple& t) {
+    using ::std::tr1::get;
+    return type(get<k0>(t), get<k1>(t), get<k2>(t), get<k3>(t), get<k4>(t),
+        get<k5>(t));
+  }
+};
+
+template <class Tuple, int k0, int k1, int k2, int k3, int k4, int k5, int k6>
+class TupleFields<Tuple, k0, k1, k2, k3, k4, k5, k6, -1, -1, -1> {
+ public:
+  typedef ::std::tr1::tuple<GMOCK_FIELD_TYPE_(Tuple, k0),
+      GMOCK_FIELD_TYPE_(Tuple, k1), GMOCK_FIELD_TYPE_(Tuple, k2),
+      GMOCK_FIELD_TYPE_(Tuple, k3), GMOCK_FIELD_TYPE_(Tuple, k4),
+      GMOCK_FIELD_TYPE_(Tuple, k5), GMOCK_FIELD_TYPE_(Tuple, k6)> type;
+  static type GetSelectedFields(const Tuple& t) {
+    using ::std::tr1::get;
+    return type(get<k0>(t), get<k1>(t), get<k2>(t), get<k3>(t), get<k4>(t),
+        get<k5>(t), get<k6>(t));
+  }
+};
+
+template <class Tuple, int k0, int k1, int k2, int k3, int k4, int k5, int k6,
+    int k7>
+class TupleFields<Tuple, k0, k1, k2, k3, k4, k5, k6, k7, -1, -1> {
+ public:
+  typedef ::std::tr1::tuple<GMOCK_FIELD_TYPE_(Tuple, k0),
+      GMOCK_FIELD_TYPE_(Tuple, k1), GMOCK_FIELD_TYPE_(Tuple, k2),
+      GMOCK_FIELD_TYPE_(Tuple, k3), GMOCK_FIELD_TYPE_(Tuple, k4),
+      GMOCK_FIELD_TYPE_(Tuple, k5), GMOCK_FIELD_TYPE_(Tuple, k6),
+      GMOCK_FIELD_TYPE_(Tuple, k7)> type;
+  static type GetSelectedFields(const Tuple& t) {
+    using ::std::tr1::get;
+    return type(get<k0>(t), get<k1>(t), get<k2>(t), get<k3>(t), get<k4>(t),
+        get<k5>(t), get<k6>(t), get<k7>(t));
+  }
+};
+
+template <class Tuple, int k0, int k1, int k2, int k3, int k4, int k5, int k6,
+    int k7, int k8>
+class TupleFields<Tuple, k0, k1, k2, k3, k4, k5, k6, k7, k8, -1> {
+ public:
+  typedef ::std::tr1::tuple<GMOCK_FIELD_TYPE_(Tuple, k0),
+      GMOCK_FIELD_TYPE_(Tuple, k1), GMOCK_FIELD_TYPE_(Tuple, k2),
+      GMOCK_FIELD_TYPE_(Tuple, k3), GMOCK_FIELD_TYPE_(Tuple, k4),
+      GMOCK_FIELD_TYPE_(Tuple, k5), GMOCK_FIELD_TYPE_(Tuple, k6),
+      GMOCK_FIELD_TYPE_(Tuple, k7), GMOCK_FIELD_TYPE_(Tuple, k8)> type;
+  static type GetSelectedFields(const Tuple& t) {
+    using ::std::tr1::get;
+    return type(get<k0>(t), get<k1>(t), get<k2>(t), get<k3>(t), get<k4>(t),
+        get<k5>(t), get<k6>(t), get<k7>(t), get<k8>(t));
+  }
+};
+
+#undef GMOCK_FIELD_TYPE_
+
+// Implements the Args() matcher.
+template <class ArgsTuple, int k0 = -1, int k1 = -1, int k2 = -1, int k3 = -1,
+    int k4 = -1, int k5 = -1, int k6 = -1, int k7 = -1, int k8 = -1,
+    int k9 = -1>
+class ArgsMatcherImpl : public MatcherInterface<ArgsTuple> {
+ public:
+  // ArgsTuple may have top-level const or reference modifiers.
+  typedef GMOCK_REMOVE_CONST_(GMOCK_REMOVE_REFERENCE_(ArgsTuple)) RawArgsTuple;
+  typedef typename internal::TupleFields<RawArgsTuple, k0, k1, k2, k3, k4, k5,
+      k6, k7, k8, k9>::type SelectedArgs;
+  typedef Matcher<const SelectedArgs&> MonomorphicInnerMatcher;
+
+  template <typename InnerMatcher>
+  explicit ArgsMatcherImpl(const InnerMatcher& inner_matcher)
+      : inner_matcher_(SafeMatcherCast<const SelectedArgs&>(inner_matcher)) {}
+
+  virtual bool Matches(ArgsTuple args) const {
+    return inner_matcher_.Matches(GetSelectedArgs(args));
   }
 
-  // Returns true iff 'container' matches.
-  virtual bool Matches(Container container) const {
-    if (container.size() != count())
-      return false;
-
-    typename RawContainer::const_iterator container_iter = container.begin();
-    for (size_t i = 0; i != count();  ++container_iter, ++i) {
-      if (!matchers_[i].Matches(*container_iter))
-        return false;
-    }
-
-    return true;
-  }
-
-  // Describes what this matcher does.
   virtual void DescribeTo(::std::ostream* os) const {
-    if (count() == 0) {
-      *os << "is empty";
-    } else if (count() == 1) {
-      *os << "has 1 element that ";
-      matchers_[0].DescribeTo(os);
-    } else {
-      *os << "has " << Elements(count()) << " where\n";
-      for (size_t i = 0; i != count(); ++i) {
-        *os << "element " << i << " ";
-        matchers_[i].DescribeTo(os);
-        if (i + 1 < count()) {
-          *os << ",\n";
-        }
-      }
-    }
+    PrintIndices(os);
+    inner_matcher_.DescribeTo(os);
   }
 
-  // Describes what the negation of this matcher does.
   virtual void DescribeNegationTo(::std::ostream* os) const {
-    if (count() == 0) {
-      *os << "is not empty";
-      return;
-    }
-
-    *os << "does not have " << Elements(count()) << ", or\n";
-    for (size_t i = 0; i != count(); ++i) {
-      *os << "element " << i << " ";
-      matchers_[i].DescribeNegationTo(os);
-      if (i + 1 < count()) {
-        *os << ", or\n";
-      }
-    }
+    PrintIndices(os);
+    inner_matcher_.DescribeNegationTo(os);
   }
 
-  // Explains why 'container' matches, or doesn't match, this matcher.
-  virtual void ExplainMatchResultTo(Container container,
+  virtual void ExplainMatchResultTo(ArgsTuple args,
                                     ::std::ostream* os) const {
-    if (Matches(container)) {
-      // We need to explain why *each* element matches (the obvious
-      // ones can be skipped).
-
-      bool reason_printed = false;
-      typename RawContainer::const_iterator container_iter = container.begin();
-      for (size_t i = 0; i != count(); ++container_iter, ++i) {
-        ::std::stringstream ss;
-        matchers_[i].ExplainMatchResultTo(*container_iter, &ss);
-
-        const string s = ss.str();
-        if (!s.empty()) {
-          if (reason_printed) {
-            *os << ",\n";
-          }
-          *os << "element " << i << " " << s;
-          reason_printed = true;
-        }
-      }
-    } else {
-      // We need to explain why the container doesn't match.
-      const size_t actual_count = container.size();
-      if (actual_count != count()) {
-        // The element count doesn't match.  If the container is
-        // empty, there's no need to explain anything as Google Mock
-        // already prints the empty container.  Otherwise we just need
-        // to show how many elements there actually are.
-        if (actual_count != 0) {
-          *os << "has " << Elements(actual_count);
-        }
-        return;
-      }
-
-      // The container has the right size but at least one element
-      // doesn't match expectation.  We need to find this element and
-      // explain why it doesn't match.
-      typename RawContainer::const_iterator container_iter = container.begin();
-      for (size_t i = 0; i != count(); ++container_iter, ++i) {
-        if (matchers_[i].Matches(*container_iter)) {
-          continue;
-        }
-
-        *os << "element " << i << " doesn't match";
-
-        ::std::stringstream ss;
-        matchers_[i].ExplainMatchResultTo(*container_iter, &ss);
-        const string s = ss.str();
-        if (!s.empty()) {
-          *os << " (" << s << ")";
-        }
-        return;
-      }
-    }
+    inner_matcher_.ExplainMatchResultTo(GetSelectedArgs(args), os);
   }
 
  private:
-  static Message Elements(size_t count) {
-    return Message() << count << (count == 1 ? " element" : " elements");
+  static SelectedArgs GetSelectedArgs(ArgsTuple args) {
+    return TupleFields<RawArgsTuple, k0, k1, k2, k3, k4, k5, k6, k7, k8,
+        k9>::GetSelectedFields(args);
   }
 
-  size_t count() const { return matchers_.size(); }
-  std::vector<Matcher<const Element&> > matchers_;
+  // Prints the indices of the selected fields.
+  static void PrintIndices(::std::ostream* os) {
+    *os << "are a tuple whose fields (";
+    const int indices[10] = { k0, k1, k2, k3, k4, k5, k6, k7, k8, k9 };
+    for (int i = 0; i < 10; i++) {
+      if (indices[i] < 0)
+        break;
+
+      if (i >= 1)
+        *os << ", ";
+
+      *os << "#" << indices[i];
+    }
+    *os << ") ";
+  }
+
+  const MonomorphicInnerMatcher inner_matcher_;
 };
 
-// Implements ElementsAre() of 0-10 arguments.
-
-class ElementsAreMatcher0 {
+template <class InnerMatcher, int k0 = -1, int k1 = -1, int k2 = -1,
+    int k3 = -1, int k4 = -1, int k5 = -1, int k6 = -1, int k7 = -1,
+    int k8 = -1, int k9 = -1>
+class ArgsMatcher {
  public:
-  ElementsAreMatcher0() {}
+  explicit ArgsMatcher(const InnerMatcher& inner_matcher)
+      : inner_matcher_(inner_matcher) {}
 
-  template <typename Container>
-  operator Matcher<Container>() const {
-    typedef GMOCK_REMOVE_CONST_(GMOCK_REMOVE_REFERENCE_(Container))
-        RawContainer;
-    typedef typename RawContainer::value_type Element;
-
-    const Matcher<const Element&>* const matchers = NULL;
-    return MakeMatcher(new ElementsAreMatcherImpl<Container>(matchers, 0));
+  template <typename ArgsTuple>
+  operator Matcher<ArgsTuple>() const {
+    return MakeMatcher(new ArgsMatcherImpl<ArgsTuple, k0, k1, k2, k3, k4, k5,
+        k6, k7, k8, k9>(inner_matcher_));
   }
+
+  const InnerMatcher inner_matcher_;
 };
+
+// Implements ElementsAre() of 1-10 arguments.
 
 template <typename T1>
 class ElementsAreMatcher1 {
@@ -206,13 +301,18 @@ class ElementsAreMatcher1 {
   operator Matcher<Container>() const {
     typedef GMOCK_REMOVE_CONST_(GMOCK_REMOVE_REFERENCE_(Container))
         RawContainer;
-    typedef typename RawContainer::value_type Element;
+    typedef typename internal::StlContainerView<RawContainer>::type::value_type
+        Element;
 
-    const Matcher<const Element&> matchers[] = {
-      MatcherCast<const Element&>(e1_),
-    };
-
-    return MakeMatcher(new ElementsAreMatcherImpl<Container>(matchers, 1));
+    // Nokia's Symbian Compiler has a nasty bug where the object put
+    // in a one-element local array is not destructed when the array
+    // goes out of scope.  This leads to obvious badness as we've
+    // added the linked_ptr in it to our other linked_ptrs list.
+    // Hence we implement ElementsAreMatcher1 specially to avoid using
+    // a local array.
+    const Matcher<const Element&> matcher =
+        MatcherCast<const Element&>(e1_);
+    return MakeMatcher(new ElementsAreMatcherImpl<Container>(&matcher, 1));
   }
 
  private:
@@ -228,7 +328,8 @@ class ElementsAreMatcher2 {
   operator Matcher<Container>() const {
     typedef GMOCK_REMOVE_CONST_(GMOCK_REMOVE_REFERENCE_(Container))
         RawContainer;
-    typedef typename RawContainer::value_type Element;
+    typedef typename internal::StlContainerView<RawContainer>::type::value_type
+        Element;
 
     const Matcher<const Element&> matchers[] = {
       MatcherCast<const Element&>(e1_),
@@ -253,7 +354,8 @@ class ElementsAreMatcher3 {
   operator Matcher<Container>() const {
     typedef GMOCK_REMOVE_CONST_(GMOCK_REMOVE_REFERENCE_(Container))
         RawContainer;
-    typedef typename RawContainer::value_type Element;
+    typedef typename internal::StlContainerView<RawContainer>::type::value_type
+        Element;
 
     const Matcher<const Element&> matchers[] = {
       MatcherCast<const Element&>(e1_),
@@ -280,7 +382,8 @@ class ElementsAreMatcher4 {
   operator Matcher<Container>() const {
     typedef GMOCK_REMOVE_CONST_(GMOCK_REMOVE_REFERENCE_(Container))
         RawContainer;
-    typedef typename RawContainer::value_type Element;
+    typedef typename internal::StlContainerView<RawContainer>::type::value_type
+        Element;
 
     const Matcher<const Element&> matchers[] = {
       MatcherCast<const Element&>(e1_),
@@ -309,7 +412,8 @@ class ElementsAreMatcher5 {
   operator Matcher<Container>() const {
     typedef GMOCK_REMOVE_CONST_(GMOCK_REMOVE_REFERENCE_(Container))
         RawContainer;
-    typedef typename RawContainer::value_type Element;
+    typedef typename internal::StlContainerView<RawContainer>::type::value_type
+        Element;
 
     const Matcher<const Element&> matchers[] = {
       MatcherCast<const Element&>(e1_),
@@ -342,7 +446,8 @@ class ElementsAreMatcher6 {
   operator Matcher<Container>() const {
     typedef GMOCK_REMOVE_CONST_(GMOCK_REMOVE_REFERENCE_(Container))
         RawContainer;
-    typedef typename RawContainer::value_type Element;
+    typedef typename internal::StlContainerView<RawContainer>::type::value_type
+        Element;
 
     const Matcher<const Element&> matchers[] = {
       MatcherCast<const Element&>(e1_),
@@ -377,7 +482,8 @@ class ElementsAreMatcher7 {
   operator Matcher<Container>() const {
     typedef GMOCK_REMOVE_CONST_(GMOCK_REMOVE_REFERENCE_(Container))
         RawContainer;
-    typedef typename RawContainer::value_type Element;
+    typedef typename internal::StlContainerView<RawContainer>::type::value_type
+        Element;
 
     const Matcher<const Element&> matchers[] = {
       MatcherCast<const Element&>(e1_),
@@ -414,7 +520,8 @@ class ElementsAreMatcher8 {
   operator Matcher<Container>() const {
     typedef GMOCK_REMOVE_CONST_(GMOCK_REMOVE_REFERENCE_(Container))
         RawContainer;
-    typedef typename RawContainer::value_type Element;
+    typedef typename internal::StlContainerView<RawContainer>::type::value_type
+        Element;
 
     const Matcher<const Element&> matchers[] = {
       MatcherCast<const Element&>(e1_),
@@ -454,7 +561,8 @@ class ElementsAreMatcher9 {
   operator Matcher<Container>() const {
     typedef GMOCK_REMOVE_CONST_(GMOCK_REMOVE_REFERENCE_(Container))
         RawContainer;
-    typedef typename RawContainer::value_type Element;
+    typedef typename internal::StlContainerView<RawContainer>::type::value_type
+        Element;
 
     const Matcher<const Element&> matchers[] = {
       MatcherCast<const Element&>(e1_),
@@ -496,7 +604,8 @@ class ElementsAreMatcher10 {
   operator Matcher<Container>() const {
     typedef GMOCK_REMOVE_CONST_(GMOCK_REMOVE_REFERENCE_(Container))
         RawContainer;
-    typedef typename RawContainer::value_type Element;
+    typedef typename internal::StlContainerView<RawContainer>::type::value_type
+        Element;
 
     const Matcher<const Element&> matchers[] = {
       MatcherCast<const Element&>(e1_),
@@ -527,28 +636,85 @@ class ElementsAreMatcher10 {
   const T10& e10_;
 };
 
-// Implements ElementsAreArray().
-template <typename T>
-class ElementsAreArrayMatcher {
- public:
-  ElementsAreArrayMatcher(const T* first, size_t count) :
-      first_(first), count_(count) {}
-
-  template <typename Container>
-  operator Matcher<Container>() const {
-    typedef GMOCK_REMOVE_CONST_(GMOCK_REMOVE_REFERENCE_(Container))
-        RawContainer;
-    typedef typename RawContainer::value_type Element;
-
-    return MakeMatcher(new ElementsAreMatcherImpl<Container>(first_, count_));
-  }
-
- private:
-  const T* const first_;
-  const size_t count_;
-};
-
 }  // namespace internal
+
+// Args<N1, N2, ..., Nk>(a_matcher) matches a tuple if the selected
+// fields of it matches a_matcher.  C++ doesn't support default
+// arguments for function templates, so we have to overload it.
+template <typename InnerMatcher>
+inline internal::ArgsMatcher<InnerMatcher>
+Args(const InnerMatcher& matcher) {
+  return internal::ArgsMatcher<InnerMatcher>(matcher);
+}
+
+template <int k1, typename InnerMatcher>
+inline internal::ArgsMatcher<InnerMatcher, k1>
+Args(const InnerMatcher& matcher) {
+  return internal::ArgsMatcher<InnerMatcher, k1>(matcher);
+}
+
+template <int k1, int k2, typename InnerMatcher>
+inline internal::ArgsMatcher<InnerMatcher, k1, k2>
+Args(const InnerMatcher& matcher) {
+  return internal::ArgsMatcher<InnerMatcher, k1, k2>(matcher);
+}
+
+template <int k1, int k2, int k3, typename InnerMatcher>
+inline internal::ArgsMatcher<InnerMatcher, k1, k2, k3>
+Args(const InnerMatcher& matcher) {
+  return internal::ArgsMatcher<InnerMatcher, k1, k2, k3>(matcher);
+}
+
+template <int k1, int k2, int k3, int k4, typename InnerMatcher>
+inline internal::ArgsMatcher<InnerMatcher, k1, k2, k3, k4>
+Args(const InnerMatcher& matcher) {
+  return internal::ArgsMatcher<InnerMatcher, k1, k2, k3, k4>(matcher);
+}
+
+template <int k1, int k2, int k3, int k4, int k5, typename InnerMatcher>
+inline internal::ArgsMatcher<InnerMatcher, k1, k2, k3, k4, k5>
+Args(const InnerMatcher& matcher) {
+  return internal::ArgsMatcher<InnerMatcher, k1, k2, k3, k4, k5>(matcher);
+}
+
+template <int k1, int k2, int k3, int k4, int k5, int k6, typename InnerMatcher>
+inline internal::ArgsMatcher<InnerMatcher, k1, k2, k3, k4, k5, k6>
+Args(const InnerMatcher& matcher) {
+  return internal::ArgsMatcher<InnerMatcher, k1, k2, k3, k4, k5, k6>(matcher);
+}
+
+template <int k1, int k2, int k3, int k4, int k5, int k6, int k7,
+    typename InnerMatcher>
+inline internal::ArgsMatcher<InnerMatcher, k1, k2, k3, k4, k5, k6, k7>
+Args(const InnerMatcher& matcher) {
+  return internal::ArgsMatcher<InnerMatcher, k1, k2, k3, k4, k5, k6,
+      k7>(matcher);
+}
+
+template <int k1, int k2, int k3, int k4, int k5, int k6, int k7, int k8,
+    typename InnerMatcher>
+inline internal::ArgsMatcher<InnerMatcher, k1, k2, k3, k4, k5, k6, k7, k8>
+Args(const InnerMatcher& matcher) {
+  return internal::ArgsMatcher<InnerMatcher, k1, k2, k3, k4, k5, k6, k7,
+      k8>(matcher);
+}
+
+template <int k1, int k2, int k3, int k4, int k5, int k6, int k7, int k8,
+    int k9, typename InnerMatcher>
+inline internal::ArgsMatcher<InnerMatcher, k1, k2, k3, k4, k5, k6, k7, k8, k9>
+Args(const InnerMatcher& matcher) {
+  return internal::ArgsMatcher<InnerMatcher, k1, k2, k3, k4, k5, k6, k7, k8,
+      k9>(matcher);
+}
+
+template <int k1, int k2, int k3, int k4, int k5, int k6, int k7, int k8,
+    int k9, int k10, typename InnerMatcher>
+inline internal::ArgsMatcher<InnerMatcher, k1, k2, k3, k4, k5, k6, k7, k8, k9,
+    k10>
+Args(const InnerMatcher& matcher) {
+  return internal::ArgsMatcher<InnerMatcher, k1, k2, k3, k4, k5, k6, k7, k8,
+      k9, k10>(matcher);
+}
 
 // ElementsAre(e0, e1, ..., e_n) matches an STL-style container with
 // (n + 1) elements, where the i-th element in the container must
@@ -828,48 +994,6 @@ ElementsAreArray(const T (&array)[N]) {
 //
 // To learn more about using these macros, please search for 'MATCHER'
 // on http://code.google.com/p/googlemock/wiki/CookBook.
-
-namespace testing {
-namespace internal {
-
-// Constants denoting interpolations in a matcher description string.
-const int kTupleInterpolation = -1;    // "%(*)s"
-const int kPercentInterpolation = -2;  // "%%"
-const int kInvalidInterpolation = -3;  // "%" followed by invalid text
-
-// Records the location and content of an interpolation.
-struct Interpolation {
-  Interpolation(const char* start, const char* end, int param)
-      : start_pos(start), end_pos(end), param_index(param) {}
-
-  // Points to the start of the interpolation (the '%' character).
-  const char* start_pos;
-  // Points to the first character after the interpolation.
-  const char* end_pos;
-  // 0-based index of the interpolated matcher parameter;
-  // kTupleInterpolation for "%(*)s"; kPercentInterpolation for "%%".
-  int param_index;
-};
-
-typedef ::std::vector<Interpolation> Interpolations;
-
-// Parses a matcher description string and returns a vector of
-// interpolations that appear in the string; generates non-fatal
-// failures iff 'description' is an invalid matcher description.
-// 'param_names' is a NULL-terminated array of parameter names in the
-// order they appear in the MATCHER_P*() parameter list.
-Interpolations ValidateMatcherDescription(
-    const char* param_names[], const char* description);
-
-// Returns the actual matcher description, given the matcher name,
-// user-supplied description template string, interpolations in the
-// string, and the printed values of the matcher parameters.
-string FormatMatcherDescription(
-    const char* matcher_name, const char* description,
-    const Interpolations& interp, const Strings& param_values);
-
-}  // namespace internal
-}  // namespace testing
 
 #define MATCHER(name, description)\
   class name##Matcher {\
@@ -1572,46 +1696,5 @@ string FormatMatcherDescription(
   bool name##MatcherP10<p0##_type, p1##_type, p2##_type, p3##_type, \
       p4##_type, p5##_type, p6##_type, p7##_type, p8##_type, p9##_type>::\
       gmock_Impl<arg_type>::Matches(arg_type arg) const
-
-namespace testing {
-namespace internal {
-
-// Returns true iff element is in the STL-style container.
-template <typename Container, typename Element>
-inline bool Contains(const Container& container, const Element& element) {
-  return ::std::find(container.begin(), container.end(), element) !=
-      container.end();
-}
-
-// Returns true iff element is in the C-style array.
-template <typename ArrayElement, size_t N, typename Element>
-inline bool Contains(const ArrayElement (&array)[N], const Element& element) {
-  return ::std::find(array, array + N, element) != array + N;
-}
-
-}  // namespace internal
-
-// Matches an STL-style container or a C-style array that contains the given
-// element.
-//
-// Examples:
-//   ::std::set<int> page_ids;
-//   page_ids.insert(3);
-//   page_ids.insert(1);
-//   EXPECT_THAT(page_ids, Contains(1));
-//   EXPECT_THAT(page_ids, Contains(3.0));
-//   EXPECT_THAT(page_ids, Not(Contains(4)));
-//
-//   ::std::map<int, size_t> page_lengths;
-//   page_lengths[1] = 100;
-//   EXPECT_THAT(map_int, Contains(::std::pair<const int, size_t>(1, 100)));
-//
-//   const char* user_ids[] = { "joe", "mike", "tom" };
-//   EXPECT_THAT(user_ids, Contains(::std::string("tom")));
-MATCHER_P(Contains, element, "") {
-  return internal::Contains(arg, element);
-}
-
-}  // namespace testing
 
 #endif  // GMOCK_INCLUDE_GMOCK_GMOCK_GENERATED_MATCHERS_H_

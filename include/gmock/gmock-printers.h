@@ -36,11 +36,19 @@
 //
 //   void ::testing::internal::UniversalPrinter<T>::Print(value, ostream_ptr);
 //
-// It uses the << operator when possible, and prints the bytes in the
-// object otherwise.  A user can override its behavior for a class
-// type Foo by defining either operator<<(::std::ostream&, const Foo&)
-// or void PrintTo(const Foo&, ::std::ostream*) in the namespace that
-// defines Foo.  If both are defined, PrintTo() takes precedence.
+// A user can teach this function how to print a class type T by
+// defining either operator<<() or PrintTo() in the namespace that
+// defines T.  More specifically, the FIRST defined function in the
+// following list will be used (assuming T is defined in namespace
+// foo):
+//
+//   1. foo::PrintTo(const T&, ostream*)
+//   2. operator<<(ostream&, const T&) defined in either foo or the
+//      global namespace.
+//
+// If none of the above is defined, it will print the debug string of
+// the value if it is a protocol buffer, or print the raw bytes in the
+// value otherwise.
 //
 // To aid debugging: when T is a reference type, the address of the
 // value is also printed; when T is a (const) char pointer, both the
@@ -58,10 +66,28 @@
 //   // printed.
 //   void ::testing::internal::UniversalTersePrint(const T& value, ostream*);
 //
+//   // Prints value using the type inferred by the compiler.  The difference
+//   // from UniversalTersePrint() is that this function prints both the
+//   // pointer and the NUL-terminated string for a (const) char pointer.
+//   void ::testing::internal::UniversalPrint(const T& value, ostream*);
+//
 //   // Prints the fields of a tuple tersely to a string vector, one
 //   // element for each field.
 //   std::vector<string> UniversalTersePrintTupleFieldsToStrings(
 //       const Tuple& value);
+//
+// Known limitation:
+//
+// The print primitives print the elements of an STL-style container
+// using the compiler-inferred type of *iter where iter is a
+// const_iterator of the container.  When const_iterator is an input
+// iterator but not a forward iterator, this inferred type may not
+// match value_type, and the print output may be incorrect.  In
+// practice, this is rarely a problem as for most containers
+// const_iterator is a forward iterator.  We'll fix this if there's an
+// actual need for it.  Note that this fix cannot rely on value_type
+// being defined as many user-defined container types don't have
+// value_type.
 
 #ifndef GMOCK_INCLUDE_GMOCK_GMOCK_PRINTERS_H_
 #define GMOCK_INCLUDE_GMOCK_GMOCK_PRINTERS_H_
@@ -75,12 +101,6 @@
 #include <gmock/internal/gmock-internal-utils.h>
 #include <gmock/internal/gmock-port.h>
 #include <gtest/gtest.h>
-
-// Makes sure there is at least one << operator declared in the global
-// namespace.  This has no implementation and won't be called
-// anywhere.  We just need the declaration such that we can say "using
-// ::operator <<;" in the definition of PrintTo() below.
-void operator<<(::testing::internal::Unused, int);
 
 namespace testing {
 
@@ -109,14 +129,21 @@ class TypeWithoutFormatter {
                          sizeof(value), os);
   }
 };
+
+// We print a protobuf using its ShortDebugString() when the string
+// doesn't exceed this many characters; otherwise we print it using
+// DebugString() for better readability.
+const size_t kProtobufOneLinerMaxLength = 50;
+
 template <typename T>
 class TypeWithoutFormatter<T, true> {
  public:
   static void PrintValue(const T& value, ::std::ostream* os) {
-    // Both ProtocolMessage and proto2::Message have the
-    // ShortDebugString() method, so the same implementation works for
-    // both.
-    ::std::operator<<(*os, "<" + value.ShortDebugString() + ">");
+    const ::testing::internal::string short_str = value.ShortDebugString();
+    const ::testing::internal::string pretty_str =
+        short_str.length() <= kProtobufOneLinerMaxLength ?
+        short_str : ("\n" + value.DebugString());
+    ::std::operator<<(*os, "<" + pretty_str + ">");
   }
 };
 
@@ -152,7 +179,48 @@ template <typename Char, typename CharTraits, typename T>
 }
 
 }  // namespace internal2
+}  // namespace testing
 
+// This namespace MUST NOT BE NESTED IN ::testing, or the name look-up
+// magic needed for implementing UniversalPrinter won't work.
+namespace testing_internal {
+
+// Used to print a value that is not an STL-style container when the
+// user doesn't define PrintTo() for it.
+template <typename T>
+void DefaultPrintNonContainerTo(const T& value, ::std::ostream* os) {
+  // With the following statement, during unqualified name lookup,
+  // testing::internal2::operator<< appears as if it was declared in
+  // the nearest enclosing namespace that contains both
+  // ::testing_internal and ::testing::internal2, i.e. the global
+  // namespace.  For more details, refer to the C++ Standard section
+  // 7.3.4-1 [namespace.udir].  This allows us to fall back onto
+  // testing::internal2::operator<< in case T doesn't come with a <<
+  // operator.
+  //
+  // We cannot write 'using ::testing::internal2::operator<<;', which
+  // gcc 3.3 fails to compile due to a compiler bug.
+  using namespace ::testing::internal2;  // NOLINT
+
+  // Assuming T is defined in namespace foo, in the next statement,
+  // the compiler will consider all of:
+  //
+  //   1. foo::operator<< (thanks to Koenig look-up),
+  //   2. ::operator<< (as the current namespace is enclosed in ::),
+  //   3. testing::internal2::operator<< (thanks to the using statement above).
+  //
+  // The operator<< whose type matches T best will be picked.
+  //
+  // We deliberately allow #2 to be a candidate, as sometimes it's
+  // impossible to define #1 (e.g. when foo is ::std, defining
+  // anything in it is undefined behavior unless you are a compiler
+  // vendor.).
+  *os << value;
+}
+
+}  // namespace testing_internal
+
+namespace testing {
 namespace internal {
 
 // UniversalPrinter<T>::Print(value, ostream_ptr) prints the given
@@ -165,10 +233,15 @@ namespace internal {
 template <typename T>
 class UniversalPrinter;
 
+template <typename T>
+void UniversalPrint(const T& value, ::std::ostream* os);
+
 // Used to print an STL-style container when the user doesn't define
 // a PrintTo() for it.
 template <typename C>
-void DefaultPrintTo(IsContainer, const C& container, ::std::ostream* os) {
+void DefaultPrintTo(IsContainer /* dummy */,
+                    false_type /* is not a pointer */,
+                    const C& container, ::std::ostream* os) {
   const size_t kMaxCount = 32;  // The maximum number of elements to print.
   *os << '{';
   size_t count = 0;
@@ -182,7 +255,9 @@ void DefaultPrintTo(IsContainer, const C& container, ::std::ostream* os) {
       }
     }
     *os << ' ';
-    PrintTo(*it, os);
+    // We cannot call PrintTo(*it, os) here as PrintTo() doesn't
+    // handle *it being a native array.
+    internal::UniversalPrint(*it, os);
   }
 
   if (count > 0) {
@@ -191,30 +266,35 @@ void DefaultPrintTo(IsContainer, const C& container, ::std::ostream* os) {
   *os << '}';
 }
 
-// Used to print a value when the user doesn't define PrintTo() for it.
+// Used to print a pointer that is neither a char pointer nor a member
+// pointer, when the user doesn't define PrintTo() for it.  (A member
+// variable pointer or member function pointer doesn't really point to
+// a location in the address space.  Their representation is
+// implementation-defined.  Therefore they will be printed as raw
+// bytes.)
 template <typename T>
-void DefaultPrintTo(IsNotContainer, const T& value, ::std::ostream* os) {
-  // If T has its << operator defined in the global namespace, which
-  // is not recommended but sometimes unavoidable (as in
-  // util/gtl/stl_logging-inl.h), the following statement makes it
-  // visible in this function.
-  //
-  // Without the statement, << in the global namespace would be hidden
-  // by the one in ::testing::internal2, due to the next using
-  // statement.
-  using ::operator <<;
+void DefaultPrintTo(IsNotContainer /* dummy */,
+                    true_type /* is a pointer */,
+                    T* p, ::std::ostream* os) {
+  if (p == NULL) {
+    *os << "NULL";
+  } else {
+    // We want to print p as a const void*.  However, we cannot cast
+    // it to const void* directly, even using reinterpret_cast, as
+    // earlier versions of gcc (e.g. 3.4.5) cannot compile the cast
+    // when p is a function pointer.  Casting to UInt64 first solves
+    // the problem.
+    *os << reinterpret_cast<const void*>(reinterpret_cast<internal::UInt64>(p));
+  }
+}
 
-  // When T doesn't come with a << operator, we want to fall back to
-  // the one defined in ::testing::internal2, which prints the bytes in
-  // the value.
-  using ::testing::internal2::operator <<;
-
-  // Thanks to Koenig look-up, if type T has its own << operator
-  // defined in its namespace, which is the recommended way, that
-  // operator will be visible here.  Since it is more specific than
-  // the generic one, it will be picked by the compiler in the
-  // following statement - exactly what we want.
-  *os << value;
+// Used to print a non-container, non-pointer value when the user
+// doesn't define PrintTo() for it.
+template <typename T>
+void DefaultPrintTo(IsNotContainer /* dummy */,
+                    false_type /* is not a pointer */,
+                    const T& value, ::std::ostream* os) {
+  ::testing_internal::DefaultPrintNonContainerTo(value, os);
 }
 
 // Prints the given value using the << operator if it has one;
@@ -230,22 +310,29 @@ void DefaultPrintTo(IsNotContainer, const T& value, ::std::ostream* os) {
 // wants).
 template <typename T>
 void PrintTo(const T& value, ::std::ostream* os) {
-  // DefaultPrintTo() is overloaded.  The type of its first argument
-  // determines which version will be picked.  If T is an STL-style
-  // container, the version for container will be called.  Otherwise
-  // the generic version will be called.
+  // DefaultPrintTo() is overloaded.  The type of its first two
+  // arguments determine which version will be picked.  If T is an
+  // STL-style container, the version for container will be called; if
+  // T is a pointer, the pointer version will be called; otherwise the
+  // generic version will be called.
   //
   // Note that we check for container types here, prior to we check
   // for protocol message types in our operator<<.  The rationale is:
   //
   // For protocol messages, we want to give people a chance to
   // override Google Mock's format by defining a PrintTo() or
-  // operator<<.  For STL containers, we believe the Google Mock's
-  // format is superior to what util/gtl/stl-logging.h offers.
-  // Therefore we don't want it to be accidentally overridden by the
-  // latter (even if the user includes stl-logging.h through other
-  // headers indirectly, Google Mock's format will still be used).
-  DefaultPrintTo(IsContainerTest<T>(0), value, os);
+  // operator<<.  For STL containers, other formats can be
+  // incompatible with Google Mock's format for the container
+  // elements; therefore we check for container types here to ensure
+  // that our format is used.
+  //
+  // The second argument of DefaultPrintTo() is needed to bypass a bug
+  // in Symbian's C++ compiler that prevents it from picking the right
+  // overload between:
+  //
+  //   PrintTo(const T& x, ...);
+  //   PrintTo(T* x, ...);
+  DefaultPrintTo(IsContainerTest<T>(0), is_pointer<T>(), value, os);
 }
 
 // The following list of PrintTo() overloads tells
@@ -287,12 +374,11 @@ inline void PrintTo(char* s, ::std::ostream* os) {
   PrintTo(implicit_cast<const char*>(s), os);
 }
 
-// MSVC compiler can be configured to define whar_t as a typedef
-// of unsigned short. Defining an overload for const wchar_t* in that case
-// would cause pointers to unsigned shorts be printed as wide strings,
-// possibly accessing more memory than intended and causing invalid
-// memory accesses. MSVC defines _NATIVE_WCHAR_T_DEFINED symbol when
-// wchar_t is implemented as a native type.
+// MSVC can be configured to define wchar_t as a typedef of unsigned
+// short.  It defines _NATIVE_WCHAR_T_DEFINED when wchar_t is a native
+// type.  When wchar_t is a typedef, defining an overload for const
+// wchar_t* would cause unsigned short* be printed as a wide string,
+// possibly causing invalid memory accesses.
 #if !defined(_MSC_VER) || defined(_NATIVE_WCHAR_T_DEFINED)
 // Overloads for wide C strings
 void PrintTo(const wchar_t* s, ::std::ostream* os);
@@ -300,22 +386,6 @@ inline void PrintTo(wchar_t* s, ::std::ostream* os) {
   PrintTo(implicit_cast<const wchar_t*>(s), os);
 }
 #endif
-
-// Overload for pointers that are neither char pointers nor member
-// pointers.  (A member variable pointer or member function pointer
-// doesn't really points to a location in the address space.  Their
-// representation is implementation-defined.  Therefore they will be
-// printed as raw bytes.)
-template <typename T>
-void PrintTo(T* p, ::std::ostream* os) {
-  if (p == NULL) {
-    *os << "NULL";
-  } else {
-    // We cannot use implicit_cast or static_cast here, as they don't
-    // work when p is a function pointer.
-    *os << reinterpret_cast<const void*>(p);
-  }
-}
 
 // Overload for C arrays.  Multi-dimensional arrays are printed
 // properly.
@@ -543,6 +613,41 @@ class UniversalPrinter {
 #endif  // _MSC_VER
 };
 
+// UniversalPrintArray(begin, len, os) prints an array of 'len'
+// elements, starting at address 'begin'.
+template <typename T>
+void UniversalPrintArray(const T* begin, size_t len, ::std::ostream* os) {
+  if (len == 0) {
+    *os << "{}";
+  } else {
+    *os << "{ ";
+    const size_t kThreshold = 18;
+    const size_t kChunkSize = 8;
+    // If the array has more than kThreshold elements, we'll have to
+    // omit some details by printing only the first and the last
+    // kChunkSize elements.
+    // TODO(wan@google.com): let the user control the threshold using a flag.
+    if (len <= kThreshold) {
+      PrintRawArrayTo(begin, len, os);
+    } else {
+      PrintRawArrayTo(begin, kChunkSize, os);
+      *os << ", ..., ";
+      PrintRawArrayTo(begin + len - kChunkSize, kChunkSize, os);
+    }
+    *os << " }";
+  }
+}
+// This overload prints a (const) char array compactly.
+void UniversalPrintArray(const char* begin, size_t len, ::std::ostream* os);
+
+// Prints an array of 'len' elements, starting at address 'begin', to a string.
+template <typename T>
+string UniversalPrintArrayToString(const T* begin, size_t len) {
+  ::std::stringstream ss;
+  UniversalPrintArray(begin, len, &ss);
+  return ss.str();
+}
+
 // Implements printing an array type T[N].
 template <typename T, size_t N>
 class UniversalPrinter<T[N]> {
@@ -550,41 +655,13 @@ class UniversalPrinter<T[N]> {
   // Prints the given array, omitting some elements when there are too
   // many.
   static void Print(const T (&a)[N], ::std::ostream* os) {
-    // Prints a char array as a C string.  Note that we compare 'const
-    // T' with 'const char' instead of comparing T with char, in case
-    // that T is already a const type.
-    if (internal::type_equals<const T, const char>::value) {
-      UniversalPrinter<const T*>::Print(a, os);
-      return;
-    }
-
-    if (N == 0) {
-      *os << "{}";
-    } else {
-      *os << "{ ";
-      const size_t kThreshold = 18;
-      const size_t kChunkSize = 8;
-      // If the array has more than kThreshold elements, we'll have to
-      // omit some details by printing only the first and the last
-      // kChunkSize elements.
-      // TODO(wan): let the user control the threshold using a flag.
-      if (N <= kThreshold) {
-        PrintRawArrayTo(a, N, os);
-      } else {
-        PrintRawArrayTo(a, kChunkSize, os);
-        *os << ", ..., ";
-        PrintRawArrayTo(a + N - kChunkSize, kChunkSize, os);
-      }
-      *os << " }";
-    }
+    UniversalPrintArray(a, N, os);
   }
 
   // A convenient wrapper for Print() that returns the print-out as a
   // string.
   static string PrintToString(const T (&a)[N]) {
-    ::std::stringstream ss;
-    Print(a, &ss);
-    return ss.str();
+    return UniversalPrintArrayToString(a, N);
   }
 };
 
@@ -637,6 +714,15 @@ inline void UniversalTersePrint(const char* str, ::std::ostream* os) {
 }
 inline void UniversalTersePrint(char* str, ::std::ostream* os) {
   UniversalTersePrint(static_cast<const char*>(str), os);
+}
+
+// Prints a value using the type inferred by the compiler.  The
+// difference between this and UniversalTersePrint() is that for a
+// (const) char pointer, this prints both the pointer and the
+// NUL-terminated string.
+template <typename T>
+void UniversalPrint(const T& value, ::std::ostream* os) {
+  UniversalPrinter<T>::Print(value, os);
 }
 
 // Prints the fields of a tuple tersely to a string vector, one
